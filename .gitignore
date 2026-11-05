@@ -43,10 +43,3 @@ models/**
 reports/**
 !reports/
 !reports/README.md
-logs/**
-!logs/
-!logs/README.md
-
-# Raw Binance downloads and their checksums
-*.zip
-*.CHECKSUM
