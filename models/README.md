@@ -1,7 +1,7 @@
-# models/  [Trained model, generated]
+# Model artifacts
 
-- **Purpose:** holds the saved model, e.g. `model.joblib`
-- **Written by:** `src/main.py` after the model passes evaluation (through `utils.py`)
-- **Read by:** `src/infer.py`, and in stage 3 the API (`src/api.py`)
-- **Key idea:** ONE file with preprocessing + model together, so training and serving cannot drift apart
-- **Git:** ignored. Stage 3 versions models in a model registry instead
+The integrated pipeline writes candidate bundles under candidates/ or failed_candidates/.
+Bundles contain fitted preprocessing/model, feature definitions, training-only target cutoffs, settings and metadata.
+A quality-gate pass does not approve release. Do not automatically overwrite an accepted model.joblib.
+Verify loading and predictions without retraining during model integration. Load only trusted serialized files.
+Generated models are ignored by Git; this README may be tracked.

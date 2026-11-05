@@ -1,0 +1,156 @@
+{
+  "paths": {
+    "raw_dir": "data/raw",
+    "clean_data": "data/processed/clean.csv",
+    "model": "models/model.joblib",
+    "predictions": "reports/predictions.csv",
+    "metrics": "reports/metrics.json",
+    "log_file": "logs/pipeline.log"
+  },
+  "columns": {
+    "symbol_col": "symbol",
+    "time_col": "open_time",
+    "open_col": "open",
+    "high_col": "high",
+    "low_col": "low",
+    "close_col": "close",
+    "volume_col": "volume",
+    "quote_volume_col": "quote_volume",
+    "trades_col": "trade_count",
+    "future_volatility_col": "future_rv",
+    "target_col": "high_volatility"
+  },
+  "data": {
+    "file_pattern": "**/*-1m-*.csv",
+    "symbol_regex": "^([A-Z0-9]+)-1m-",
+    "raw_columns": [
+      "open_time",
+      "open",
+      "high",
+      "low",
+      "close",
+      "volume",
+      "close_time",
+      "quote_volume",
+      "trade_count",
+      "taker_buy_base_volume",
+      "taker_buy_quote_volume",
+      "ignore"
+    ]
+  },
+  "rules": {
+    "frequency": "1min",
+    "microseconds_above": 100000000000000.0,
+    "value_columns": [
+      "open",
+      "high",
+      "low",
+      "close",
+      "volume",
+      "quote_volume",
+      "trade_count"
+    ],
+    "positive_columns": [
+      "open",
+      "high",
+      "low",
+      "close"
+    ],
+    "non_negative_columns": [
+      "volume",
+      "quote_volume",
+      "trade_count"
+    ],
+    "allowed_symbols": [
+      "BTCUSDT",
+      "ETHUSDT",
+      "SOLUSDT"
+    ],
+    "target_values": [
+      0,
+      1
+    ],
+    "close_time_column": "close_time"
+  },
+  "features": {
+    "parameters": {
+      "return_windows": [
+        1,
+        5,
+        15,
+        30
+      ],
+      "rv_windows": [
+        5,
+        15,
+        30
+      ],
+      "activity_short": 5
+    },
+    "windows": {
+      "short": 15,
+      "long": 60
+    },
+    "numeric": [
+      "return_1",
+      "return_5",
+      "return_15",
+      "return_30",
+      "rv_5",
+      "rv_15",
+      "rv_30",
+      "rv_60c_59r",
+      "range_mean_60",
+      "volume_ratio_5_60",
+      "trades_ratio_5_60",
+      "hour_sin",
+      "hour_cos",
+      "weekday_sin",
+      "weekday_cos"
+    ],
+    "categorical": [
+      "symbol"
+    ]
+  },
+  "target": {
+    "horizon": 15,
+    "quantile": 0.9
+  },
+  "split": {
+    "train_end": "2026-03-31 23:59:00",
+    "validation_end": "2026-06-30 23:59:00"
+  },
+  "training": {
+    "model_type": "hist_gradient_boosting",
+    "random_state": 42,
+    "params": {
+      "max_iter": 100,
+      "max_leaf_nodes": 31,
+      "learning_rate": 0.1,
+      "min_samples_leaf": 100,
+      "early_stopping": false
+    }
+  },
+  "quality_gate": {
+    "metric": "average_precision",
+    "direction": "higher_is_better",
+    "split": "validation",
+    "benchmark_column": "rv_60c_59r",
+    "min_ratio_vs_benchmark": 1.2
+  },
+  "logging": {
+    "level": "INFO"
+  },
+  "feature_definitions": {
+    "returns": "log(C[t]/C[t-k]), k=1/5/15/30",
+    "rv": "sqrt(sum of last k squared log returns), k=5/15/30; benchmark 59 internal returns",
+    "range": "mean((high-low)/close) over 60 candles",
+    "activity": "5-candle mean / 60-candle mean, volume/trades",
+    "calendar": "cyclical UTC decision hour and weekday"
+  },
+  "scope": {
+    "start": "2025-04-01",
+    "end_exclusive": "2026-10-01",
+    "expected_months": 18
+  }
+}
