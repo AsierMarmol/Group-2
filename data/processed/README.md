@@ -1,5 +1,6 @@
-# data/processed/  [Cleaned data, generated]
+# Processed data
 
-- **Purpose:** the cleaned dataset, saved by the pipeline for inspection and audit
-- **Written by:** `src/main.py` after `clean_data.py` (through `utils.py`)
-- **Rule:** generated, never edited by hand. Delete it and rerun to recreate it
+The integrated pipeline will write clean.csv here after candle cleaning and validation,
+using paths from main.SETTINGS. Rows identify an asset and UTC candle opening time.
+These are generated outputs: never edit them manually or commit them. Recreate them from the original data.
+The pipeline and output verification arrive in the assigned module/integration milestones.
