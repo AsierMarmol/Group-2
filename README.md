@@ -1,137 +1,62 @@
-# Crypto Volatility Early-Warning System
+# MLOps Project Skeleton (reference only)
 
-> The fund should operationalize volatility prediction with reproducible pipelines, automated tests and monitoring to support timely risk assessments beyond reactive alerts.
+This repo is a **map, not a codebase**. Every file is a placeholder: no code, only a short note on
+what the file does, where it sits in the pipeline and which files it talks to.
 
-## 1. Business case
+Create the same folders and files in **your own** project repo, then write the code for **your** use case.
 
-### Context
+## Stages = branches
 
-**Client:** Hypothetical cryptocurrency investment fund, Market Risk Management. **Assumed maturity:** data/tools/people **medium**, MLOps processes **low**, reflecting available public data and technical staff but no established model releases. Client ownership: **TBD**.
+| Branch | Stage | Sessions | What it adds |
+|---|---|---|---|
+| `main` (you are here) | 1. Kickoff | 1 to 3 | Folder structure, business case, one placeholder per pipeline step |
+| `stage-2-modular` | 2. Modular code | 4 to 9 | Tests, style and test settings, first CI (Continuous Integration) workflow |
+| `stage-3-cicd` | 3. CI/CD | 10 to 14 | Config loader, logging, experiment tracking, API, Docker, deployment |
 
-### Problem and baseline
+Tip: on GitHub, open **Compare** (`main...stage-2-modular`) to see exactly what each stage adds.
 
-**Assumed current process:** automated price/volume alerts followed by manual investigation. Delays are **unmeasured**. **Business KPI:** median seconds to complete a usable risk assessment. **Baseline: TBD**, using approximately 15–20 timed historical scenarios and an assessment-quality check. Student results are not actual fund performance.
+## The pipeline at a glance
 
-### Goal and success metrics
-
-| Type | Metric (exact name) | Baseline | Target or threshold |
-| --- | --- | --- | --- |
-| Business | Median assessment time (seconds) | **TBD** | Improvement **TBD**; quality safeguard **TBD** |
-| ML | `average_precision` (equal-weight mean across BTC, ETH, SOL) | **0.408660**, measured on April–June 2026; past-60-candle realized-volatility benchmark | **≥ 1.20 × benchmark** on chronological validation data |
-| Operational | API latency, data freshness, cost per prediction | **TBD** | Limits **TBD** |
-
-The **20% ML gate** was pre-agreed. The previously verified local ML run achieved validation macro AP **0.514824**, above the required **0.490392** (1.20 × benchmark). This is a validation-only pass; the model remains a candidate pending review. Per-asset and historical final-period results must be included in the model evaluation handoff. The final period has prior analytical exposure. Failed candidates are not promoted.
-
-### Solution
-
-For BTCUSDT, ETHUSDT and SOLUSDT, a classifier uses **60 completed one-minute candles** to score unusually high volatility in the **next 15 minutes**. Calibration is **TBD**, so outputs remain risk scores. A **proposed** Binance REST poller triggers minute-by-minute predictions; FastAPI `POST /predict` also supports requests on demand. Historical replay supports testing.
-
-Analysts combine scores with portfolio exposure and leverage to consider hedging, reduced positions or paused trades. **No automated trades or directional forecasts.** Withhold stale/invalid scores; fall back to conventional monitoring and manual assessment.
-
-**MLOps stages:** GitHub scaffold → tested one-command pipeline → CI/CD, Docker and live prediction API. The local ML pipeline was previously verified; its integration into this repository and the later deployment stage remain unverified or unimplemented.
-
-### Data
-
-**Source:** [Binance Spot one-minute archives](https://data.binance.vision/) for training/testing; Binance Spot API for new completed candles. One row = one asset-minute. Verified local history: **April 2025–September 2026**, **2,367,360 valid candles** across 54 files. Local checksums identify copies but do not establish publisher authenticity.
-
-**Label:** Next-15-minute realized volatility exceeds the **asset-specific training-data 90th percentile**. Use time-ordered splits and identical past-only features in training and inference. Feature/label timing and chronological boundaries are specified in `TEAM_BRIEF.md` and `SETTINGS`. Data Engineering owns acquisition, storage and validation; ML Engineering owns features, labels and quality. No personal data is expected.
-
-### Value, cost and risks
-
-**Expected benefit:** faster, more consistent risk assessment, **not demonstrated**. Pilot resources: part-time existing staff roles, student/university computers and open-source tools; no paid hosting planned. Hours, duration and actual costs: **TBD**. No 24/7 uptime or reduction in portfolio losses is promised; expansion requires validation.
-
-| Risk | Mitigation |
-| --- | --- |
-| Missing or inconsistent candles | Check schema, UTC timestamps, gaps and duplicates |
-| Data leakage or weak predictions | Chronological tests, train-only thresholds and fixed quality gate |
-| Market drift or misleading scores | Track inputs/outcomes, review calibration and retrain under control |
-| Feed/API or release failure | Withhold stale scores; manual fallback; preserve approved artifacts |
-
-### Open gaps
-
-- **Measure:** business baseline/improvement, calibration, latency, freshness and costs. Repository-level reproduction of the local dataset and benchmark/model measurements remains pending; independent future confirmation remains open.
-- **Define:** business target/rubric, optional alert policy, service limits and rollback. Feature/label timing and splits were verified locally; repository integration remains pending.
-- **Confirm:** team acceptance of the tested notebook and modules, client owners, student hours, target hardware and deployment. Team/module contracts are in `TEAM_BRIEF.md`.
-
-## 2. Stage-2 setup and execution
-
-**Integration status:** The commands and file references below describe the agreed target structure. Supporting modules and notebooks
-will arrive through their assigned reviewed PRs; this README-only PR does not make
-the current repository executable. Historical measurements are not a new run of this checkout.
-
-Runtime settings belong in `SETTINGS` at the top of `src/main.py`. `config.yaml` remains
-the original repository placeholder for the later course stage. No active CI, API, polling or deployment is included.
-
-Open the repository root in VS Code. In **Terminal > New Terminal**:
-
-```powershell
-conda env create -f environment.yml
-conda activate crypto-volatility-mlops
-python -m pytest -vv
-python -m flake8 src tests
-python -m src.main
+```text
+                           main.py  (orchestrator, one command)
+                              |
+ data/raw/ -> load_data -> clean_data -> validate -> split -> features -> train -> evaluate
+                                                (train/val/test) (recipe)   (fit)   (val split)
+                                                                              |
+                     reports/predictions.csv <- infer <- models/model.joblib (save)
 ```
 
-If a fresh Miniconda installation reports `CondaToSNonInteractiveError` for default channels, run
-`conda config --show-sources` and inspect the active channel configuration. The tested installation uses:
+## Stage 1 structure
 
-```yaml
-channels:
-  - conda-forge
-default_channels: []
+```text
+.
+├── README.md                 # business case, success metrics, how to run
+├── config.yaml               # non-secret settings (paths, target, split sizes)
+├── environment.yml           # dependencies (conda)
+├── .env.example              # names of secrets, never real values
+├── .gitignore                # keeps data, secrets and generated files out of Git
+├── LICENSE
+├── .github/
+│   └── pull_request_template.md
+├── notebooks/                # the "lab": exploration only
+├── src/                      # the "factory": one job per module
+│   ├── load_data.py          # 1. read raw data
+│   ├── clean_data.py         # 2. stateless cleaning
+│   ├── validate.py           # 3. data quality gate
+│   ├── features.py           # 4. unfitted feature recipe
+│   ├── train.py              # 5. fit the pipeline
+│   ├── evaluate.py           # 6. metrics on unseen data
+│   ├── infer.py              # 7. predictions on new data
+│   ├── utils.py              # shared read and write helpers
+│   └── main.py               # 0. orchestrator: python -m src.main
+├── data/  raw/ processed/ inference/
+├── models/                   # saved model (generated)
+├── reports/                  # predictions, plots (generated)
+└── tests/                    # automated tests (stage 2)
 ```
 
-Update only the channel entries in the relevant configuration, preserving unrelated settings, then retry creation.
-The project environment also declares `nodefaults`. No acceptance of unused default-channel terms is required.
-Windows environment creation was verified with Python 3.12.16; other operating systems remain untested.
+## How to use this skeleton
 
-Select the same environment with **>Python: Select Interpreter**. If the environment already exists, update it only
-after environment.yml changes: `conda env update -f environment.yml --prune`.
-
-Put the 54 original monthly CSVs in `data/raw/BTCUSDT/`, `ETHUSDT/` and `SOLUSDT/` (April 2025–September 2026).
-Alternatively, set `$env:ML_RAW_DIR` to your existing raw-data folder before running; do not copy large datasets unnecessarily.
-Data must be supplied separately and are not committed to Git. In a new terminal reactivate the environment.
-
-The pipeline loads and validates candles, builds past-only features/future labels, splits chronologically, fits training-only
-cutoffs/preprocessing/model, evaluates validation against the 60-candle RV benchmark and records the historical final period.
-The latter has prior analytical exposure and is not an untouched holdout. No optimization is performed by the pipeline.
-
-Outputs: `data/processed/clean.csv`, candidate bundles under `models/candidates/` or `models/failed_candidates/`,
-and validation/final metrics, diagnostic predictions and the pre-test selection lock under `reports/`.
-The fixed 20% validation gate does not automatically approve a model; an accepted artifact is never overwritten.
-The teacher-compatible `probability` output is an uncalibrated risk score; binary predictions are diagnostics, not an agreed alert policy.
-Raw-candle historical replay is available through `src.infer.score_candles` with an explicit timezone-aware `as_of`.
-Load joblib files only from trusted sources.
-
-Run both notebooks with their kernel working directory at the repository root. The standalone notebook is the frozen
-research reference; the second notebook runs the modular command and checks reload/parity. New experiments belong in
-a separate notebook. Record the actual environment and execution results during integration.
-
-## 3. Team integration
-
-All five members work from the approved `TEAM_BRIEF.md` and the teacher's kickoff guidance.
-Each owner submits only their assigned milestone and relevant folder documentation.
-
-| Member | Responsibilities | Working branch |
-| --- | --- | --- |
-| Asier | Shared setup, environment, main pipeline, integration checks and release coordination | `asier/feature` |
-| Gabriel | Shared file helpers, data loading and cleaning | `gabrielstec/feature` |
-| Christian | Data validation | `christian/feature` |
-| Maria Alejandra | Targets, features and candle contract | `ale/feature` |
-| Selin | Training, evaluation, inference and notebooks | `selin/features` |
-
-Integration order: business README → shared setup → utils → loading/cleaning → validation →
-targets/features → model modules → main pipeline → notebooks → release.
-Gabriel reviews the initial README and setup; other designated reviewers are listed in `TEAM_BRIEF.md`.
-Verify prerequisite merges before submitting the next milestone. Independent preparation may proceed while waiting.
-
-Changes reach `dev` through reviewed pull requests. Before each milestone, safely synchronize the member branch
-with `dev`, preserve existing work, and check that the PR contains only that milestone. Reusing member branches
-is an explicit exception to the teacher's branch-per-module cleanup workflow.
-
-Human reviewers approve and merge; do not bypass checks or commit directly to `dev` or `main`.
-After all required modules and notebooks are integrated, verify the complete tests, lint, pipeline,
-validation quality gate and saved-model inference. Resolve pending dependency tests before release.
-The final release is a separately reviewed `dev` → `main` PR.
-
-Calibration, business assessment-time benefit, live freshness limits and independent future confirmation remain unresolved.
+1. Open a file and read its note
+2. Create the equivalent file in your repo
+3. Write your own code: the note describes the job, not the solution
