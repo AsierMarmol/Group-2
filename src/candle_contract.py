@@ -53,11 +53,12 @@ def normalize_candles(
     d["open_time"] = utc_open(d.open_time, unit=unit, microseconds_above=microseconds_above).to_numpy()
     d["open_time"] = pd.to_datetime(d.open_time, utc=True)
     if symbol is not None:
-        if "symbol" in d and (not d.symbol.eq(symbol).all()):
+        if "symbol" in d and (d.symbol.isna().any() or not d.symbol.eq(symbol).all()):
             raise ValueError("Symbol mismatch")
         d["symbol"] = symbol
     if (
         "symbol" not in d
+        or d.symbol.isna().any()
         or d.symbol.nunique() != 1
         or (allowed_symbols is not None and d.symbol.iloc[0] not in allowed_symbols)
     ):
@@ -88,7 +89,7 @@ def past_features(
     """Inputs: d, input_candles, return_windows, rv_windows, activity_short, frequency.
     Outputs: Past-only numeric predictors and a consecutive-window validity mask.
     Why: One pipeline responsibility."""
-    if d.symbol.nunique() != 1:
+    if d.symbol.isna().any() or d.symbol.nunique() != 1:
         raise ValueError("Features require one asset")
     f = pd.DataFrame(index=d.index)
     logc = np.log(d.close)

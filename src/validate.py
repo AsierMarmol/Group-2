@@ -58,12 +58,12 @@ def _check_time_order(df: pd.DataFrame, columns: dict, frequency: str) -> None:
 
 
 def _validate_candles(df: pd.DataFrame, columns: dict, rules: dict, target_column: str | None = None) -> bool:
-    """Check clean candles against every rule in config.yaml; never modify them.
+    """Check clean candles against every rule in SETTINGS; never modify them.
 
     Args:
         df: Clean candles from clean_data.py.
-        columns: The ``columns`` section of config.yaml (role -> column name).
-        rules: The ``rules`` section of config.yaml.
+        columns: The ``columns`` section of SETTINGS (role -> column name).
+        rules: The ``rules`` section of SETTINGS.
         target_column: Target to check against ``rules['target_values']``, if present.
 
     Returns:

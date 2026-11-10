@@ -50,10 +50,10 @@ def _train_configured_model(
         x_train: Training inputs (extra columns are dropped by the recipe).
         y_train: Training labels, 0 or 1.
         recipe: Unfitted ColumnTransformer from features.py (cloned, never modified).
-        training: The ``training`` section of config.yaml.
+        training: The ``training`` section of SETTINGS.
 
     Returns:
-        The fitted pipeline with steps ``features`` and ``model``.
+        The fitted pipeline with steps ``preprocess`` and ``model``.
 
     Raises:
         TypeError: ``x_train`` is not a DataFrame.
