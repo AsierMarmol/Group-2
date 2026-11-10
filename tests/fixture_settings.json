@@ -152,5 +152,8 @@
     "start": "2025-04-01",
     "end_exclusive": "2026-10-01",
     "expected_months": 18
+  },
+  "problem": {
+    "problem_type": "classification"
   }
 }
