@@ -1,13 +1,13 @@
 # Team brief
 ## Project and scientific contract
-Business case: README.md section 1; README PR requires Gabriel approval and dev merge before setup submission.
+Business case: README.md section 1; approved and merged into dev via PR #1; shared setup merged via PR #2.
 Use case: hypothetical fund's Market Risk Management assesses risk using scores; no automated trades.
 Notebook: notebooks/crypto_volatility_ml.ipynb, finalized standalone reference; original source files unchanged.
 Target: high_volatility | Problem type: classification | ID: symbol + candle opening UTC time.
 Feature groups: numeric: 1/5/15/30 returns, 5/15/30 RV, 59-return benchmark, range/activity ratios, cyclical UTC hour/weekday -> scale for logistic only.
 Feature groups: symbol -> one-hot encoding; unsupported symbols are rejected.
 Excluded columns: future_rv, high_volatility and timestamps (future leakage/identifiers).
-Model: histogram gradient boosting, 100 iterations, 31 leaves, learning_rate .1, min_samples_leaf100, seed42, early_stoppingFalse.
+Model: histogram gradient boosting, 100 iterations, 31 leaves, learning_rate .1, min_samples_leaf=100, seed42, early_stopping=False.
 Metric: average_precision; exactly BTC/ETH/SOL equal mean; validation >=1.20 x same-row past-60-candle RV benchmark.
 Split: train Apr2025–Mar2026; validation Apr–Jun2026; final Jul–Sep2026; UTC decision-time boundaries, label-end purging; no shuffle/stratification.
 Validation rules: finite positive OHLC, UTC minute grid, finite nonnegative volume, integer nonnegative trades, valid candle duration; exact duplicates removable, conflicts rejected.
@@ -32,3 +32,5 @@ Owners (team): notebooks -> Selin; reviewer Asier; branch selin/features.
 Decisions: README PR -> team setup -> utils -> load/clean -> validate -> target/features -> model -> main -> notebooks; each waits for prior dev merge.
 Decisions: config/logger/active CI uploads are deferred to Session10+; release uses reviewed dev->main PR; no direct dev/main commits.
 Decisions: reuse confirmed member branches with separate PR milestones; exception to the teacher's branch-per-module cleanup workflow.
+
+Decisions: main pipeline locally verified on 10 November 2026; Selin review/merge, notebooks and final release remain pending.
