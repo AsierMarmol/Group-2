@@ -7,11 +7,16 @@ Why: separate responsibilities and preserve forecasting chronology."""
 import pandas as pd
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
+
 from src import candle_contract
 
 
 def add_lookback_features(
-    candles: pd.DataFrame, columns: dict, windows: dict, frequency: str, feature_settings: dict | None = None
+    candles: pd.DataFrame,
+    columns: dict,
+    windows: dict,
+    frequency: str,
+    feature_settings: dict | None = None,
 ) -> pd.DataFrame:
     """Inputs: candles, columns, windows, frequency, feature_settings.
     Outputs: Canonical predictors alongside input columns for complete per-asset windows.
@@ -22,7 +27,16 @@ def add_lookback_features(
     if not 2 <= short < long:
         raise ValueError("Windows must satisfy 2 <= short < long")
     needed = [
-        columns[x] for x in ["symbol_col", "time_col", "close_col", "high_col", "low_col", "volume_col", "trades_col"]
+        columns[x]
+        for x in [
+            "symbol_col",
+            "time_col",
+            "close_col",
+            "high_col",
+            "low_col",
+            "volume_col",
+            "trades_col",
+        ]
     ]
     if any((c not in candles for c in needed)):
         raise ValueError("Missing columns for features")
@@ -40,7 +54,9 @@ def add_lookback_features(
                 columns["trades_col"]: "trades",
             }
         )
-        f, valid = candle_contract.past_features(d, input_candles=long, frequency=frequency, **feature_settings or {})
+        f, valid = candle_contract.past_features(
+            d, input_candles=long, frequency=frequency, **feature_settings or {}
+        )
         frames.append(pd.concat([g, f], axis=1).loc[valid])
     return pd.concat(frames, ignore_index=True)
 
@@ -57,9 +73,17 @@ def get_feature_preprocessor(
         raise ValueError("Feature groups overlap")
     parts = []
     if numeric_columns:
-        parts.append(("numeric", StandardScaler() if scale else "passthrough", numeric_columns))
+        parts.append(
+            ("numeric", StandardScaler() if scale else "passthrough", numeric_columns)
+        )
     if categorical_columns:
-        parts.append(("symbol", OneHotEncoder(handle_unknown="error", sparse_output=False), categorical_columns))
+        parts.append(
+            (
+                "symbol",
+                OneHotEncoder(handle_unknown="error", sparse_output=False),
+                categorical_columns,
+            )
+        )
     return ColumnTransformer(parts, remainder="drop")
 
 

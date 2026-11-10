@@ -36,7 +36,9 @@ def _drop_rows(df: pd.DataFrame, mask: pd.Series, reason: str) -> pd.DataFrame:
 def _inconsistent_candles(df: pd.DataFrame, columns: dict) -> pd.Series:
     """Flag candles whose open or close lies outside their own low-high range."""
     body = df[[columns["open_col"], columns["close_col"]]]
-    return (df[columns["high_col"]] < body.max(axis=1)) | (df[columns["low_col"]] > body.min(axis=1))
+    return (df[columns["high_col"]] < body.max(axis=1)) | (
+        df[columns["low_col"]] > body.min(axis=1)
+    )
 
 
 def _log_missing_minutes(df: pd.DataFrame, columns: dict, frequency: str) -> None:
@@ -46,10 +48,18 @@ def _log_missing_minutes(df: pd.DataFrame, columns: dict, frequency: str) -> Non
         expected = int((times.max() - times.min()) / step) + 1
         missing = expected - times.size
         if missing:
-            logger.warning("%s: %d missing minute(s) between %s and %s", symbol, missing, times.min(), times.max())
+            logger.warning(
+                "%s: %d missing minute(s) between %s and %s",
+                symbol,
+                missing,
+                times.min(),
+                times.max(),
+            )
 
 
-def _select_columns(df_raw: pd.DataFrame, columns: dict, rules: dict, target_column: str | None) -> list[str]:
+def _select_columns(
+    df_raw: pd.DataFrame, columns: dict, rules: dict, target_column: str | None
+) -> list[str]:
     """Return the columns to keep, raising a clear error when any is missing."""
     keep = [columns["symbol_col"], columns["time_col"], *rules["value_columns"]]
     if target_column:
@@ -60,7 +70,9 @@ def _select_columns(df_raw: pd.DataFrame, columns: dict, rules: dict, target_col
     return keep
 
 
-def _clean_candles(df_raw: pd.DataFrame, columns: dict, rules: dict, target_column: str | None = None) -> pd.DataFrame:
+def _clean_candles(
+    df_raw: pd.DataFrame, columns: dict, rules: dict, target_column: str | None = None
+) -> pd.DataFrame:
     """Return a clean copy of the raw candles; the input is never modified.
 
     Args:
@@ -91,15 +103,31 @@ def _clean_candles(df_raw: pd.DataFrame, columns: dict, rules: dict, target_colu
         df[column] = pd.to_numeric(df[column], errors="coerce")
     df = _drop_rows(df, df[keep].isna().any(axis=1), "missing or unreadable values")
     df[symbol] = df[symbol].astype(str).str.strip().str.upper()
-    df = _drop_rows(df, (df[rules["positive_columns"]] <= 0).any(axis=1), "non-positive prices")
-    df = _drop_rows(df, (df[rules["non_negative_columns"]] < 0).any(axis=1), "negative volumes or trade counts")
-    df = _drop_rows(df, _inconsistent_candles(df, columns), "open or close outside the low-high range")
+    df = _drop_rows(
+        df, (df[rules["positive_columns"]] <= 0).any(axis=1), "non-positive prices"
+    )
+    df = _drop_rows(
+        df,
+        (df[rules["non_negative_columns"]] < 0).any(axis=1),
+        "negative volumes or trade counts",
+    )
+    df = _drop_rows(
+        df,
+        _inconsistent_candles(df, columns),
+        "open or close outside the low-high range",
+    )
     unique = df.drop_duplicates()
     if unique.duplicated(subset=[symbol, time], keep=False).any():
         raise ValueError("Conflicting duplicate candles")
-    df = _drop_rows(df, ~np.isfinite(df[rules["value_columns"]]).all(axis=1), "nonfinite values")
-    df = _drop_rows(df, df[columns["trades_col"]].mod(1).ne(0), "fractional trade counts")
-    df = _drop_rows(df, df.duplicated(subset=[symbol, time], keep="first"), "duplicate candles")
+    df = _drop_rows(
+        df, ~np.isfinite(df[rules["value_columns"]]).all(axis=1), "nonfinite values"
+    )
+    df = _drop_rows(
+        df, df[columns["trades_col"]].mod(1).ne(0), "fractional trade counts"
+    )
+    df = _drop_rows(
+        df, df.duplicated(subset=[symbol, time], keep="first"), "duplicate candles"
+    )
     df = df.sort_values([symbol, time]).reset_index(drop=True)
     _log_missing_minutes(df, columns, rules["frequency"])
     logger.info("Cleaned candles: kept %d of %d rows", len(df), len(df_raw))
@@ -127,5 +155,7 @@ def clean_dataframe(
     if target_column is not None:
         if target_column not in out:
             raise ValueError("Missing target column")
-        return out.dropna(subset=[target_column]).drop_duplicates().reset_index(drop=True)
+        return (
+            out.dropna(subset=[target_column]).drop_duplicates().reset_index(drop=True)
+        )
     return out

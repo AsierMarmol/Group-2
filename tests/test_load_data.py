@@ -7,6 +7,7 @@ a wrong column count or an unreadable file name raise a clear error; raw files s
 
 import pandas as pd
 import pytest
+
 from src.clean_data import _clean_candles as clean_dataframe
 from src.load_data import (
     has_header_row,

@@ -13,12 +13,12 @@ from sklearn.metrics import average_precision_score, brier_score_loss, roc_auc_s
 logger = logging.getLogger(__name__)
 
 
-def evaluate_scores(y_true: pd.Series, scores: pd.Series, groups: pd.Series) -> dict[str, float]:
-    """Inputs: y_true, scores, groups.
-    Outputs: Equal-weight mean over supplied groups plus their individual AP; one-class groups raise.
-    Why: Score any risk score (model probability or benchmark) against true labels."""
+def _evaluation_arrays(
+    y_true: pd.Series, scores: pd.Series, groups: pd.Series
+) -> tuple:
+    """Check alignment, lengths and score finiteness before calculating any metric."""
     supplied = [x for x in [y_true, scores, groups] if isinstance(x, pd.Series)]
-    if supplied and any((not supplied[0].index.equals(x.index) for x in supplied[1:])):
+    if supplied and any(not supplied[0].index.equals(x.index) for x in supplied[1:]):
         raise ValueError("Evaluation indices do not align")
     labels = np.asarray(y_true)
     values = np.asarray(scores, dtype=float)
@@ -26,9 +26,21 @@ def evaluate_scores(y_true: pd.Series, scores: pd.Series, groups: pd.Series) -> 
     if labels.size == 0:
         raise ValueError("No rows to evaluate")
     if not labels.size == values.size == assets.size:
-        raise ValueError(f"Lengths differ: {labels.size} labels, {values.size} scores, {assets.size} groups")
+        raise ValueError(
+            f"Lengths differ: {labels.size} labels, {values.size} scores, {assets.size} groups"
+        )
     if not np.isfinite(values).all():
         raise ValueError("Scores contain missing values")
+    return labels, values, assets
+
+
+def evaluate_scores(
+    y_true: pd.Series, scores: pd.Series, groups: pd.Series
+) -> dict[str, float]:
+    """Inputs: y_true, scores, groups.
+    Outputs: Equal-weight mean over supplied groups plus their individual AP; one-class groups raise.
+    Why: Score any risk score (model probability or benchmark) against true labels."""
+    labels, values, assets = _evaluation_arrays(y_true, scores, groups)
     per_asset = {}
     for asset in sorted(set(assets)):
         mask = assets == asset
@@ -38,19 +50,21 @@ def evaluate_scores(y_true: pd.Series, scores: pd.Series, groups: pd.Series) -> 
             float(average_precision_score(labels[mask], values[mask])),
             float(roc_auc_score(labels[mask], values[mask])),
         )
-    if not per_asset:
-        raise ValueError("No asset has both classes, so no metric can be computed")
     metrics = {
         "average_precision": float(np.mean([pair[0] for pair in per_asset.values()])),
         "roc_auc": float(np.mean([pair[1] for pair in per_asset.values()])),
         "positive_rate": float(labels.mean()),
         "n_rows": int(labels.size),
     }
-    metrics.update({f"average_precision_{asset}": pair[0] for asset, pair in per_asset.items()})
+    metrics.update(
+        {f"average_precision_{asset}": pair[0] for asset, pair in per_asset.items()}
+    )
     return metrics
 
 
-def _evaluate_group_model(model, x_eval: pd.DataFrame, y_eval: pd.Series, group_column: str) -> dict[str, float]:
+def _evaluate_group_model(
+    model, x_eval: pd.DataFrame, y_eval: pd.Series, group_column: str
+) -> dict[str, float]:
     """Score a fitted pipeline's probabilities on unseen rows.
 
     Args:
@@ -67,9 +81,13 @@ def _evaluate_group_model(model, x_eval: pd.DataFrame, y_eval: pd.Series, group_
         ValueError: ``group_column`` is missing from ``x_eval``.
     """
     if not callable(getattr(model, "predict_proba", None)):
-        raise TypeError(f"Model of type {type(model).__name__} has no predict_proba method")
+        raise TypeError(
+            f"Model of type {type(model).__name__} has no predict_proba method"
+        )
     if group_column not in x_eval.columns:
-        raise ValueError(f"Group column '{group_column}' is missing from the evaluation data")
+        raise ValueError(
+            f"Group column '{group_column}' is missing from the evaluation data"
+        )
     probabilities = model.predict_proba(x_eval)[:, 1]
     metrics = evaluate_scores(y_eval, probabilities, x_eval[group_column])
     metrics["brier_score"] = float(brier_score_loss(y_eval, probabilities))

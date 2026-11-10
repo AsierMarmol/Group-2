@@ -34,7 +34,9 @@ START = pd.Timestamp("2026-01-01 00:00:00", tz="UTC")
 MICROSECONDS_PER_MINUTE = 60_000_000
 
 
-def make_raw_candles(minutes: int, seed: int, start: pd.Timestamp = START) -> pd.DataFrame:
+def make_raw_candles(
+    minutes: int, seed: int, start: pd.Timestamp = START
+) -> pd.DataFrame:
     """One asset's raw Binance klines (microsecond timestamps) with calm and volatile spells."""
     rng = np.random.default_rng(seed)
     spells = np.repeat(rng.random(minutes // 30 + 1) < 0.3, 30)[:minutes]
@@ -65,7 +67,9 @@ def make_raw_candles(minutes: int, seed: int, start: pd.Timestamp = START) -> pd
     )[RAW_COLUMNS]
 
 
-def make_clean_candles(minutes: int, symbol: str = "BTCUSDT", log_step: float = 0.01) -> pd.DataFrame:
+def make_clean_candles(
+    minutes: int, symbol: str = "BTCUSDT", log_step: float = 0.01
+) -> pd.DataFrame:
     """Clean candles with a known shape: every close is exp(log_step) times the previous one.
 
     Known values: one-minute log return = log_step, candle range = log_step + log(1.002 / 0.998),
@@ -88,17 +92,23 @@ def make_clean_candles(minutes: int, symbol: str = "BTCUSDT", log_step: float = 
     )
 
 
-def write_raw_dir(folder: Path, minutes: int, symbols: tuple = ("BTCUSDT", "ETHUSDT", "SOLUSDT")) -> Path:
+def write_raw_dir(
+    folder: Path, minutes: int, symbols: tuple = ("BTCUSDT", "ETHUSDT", "SOLUSDT")
+) -> Path:
     """Write one headerless Binance-style file per symbol into ``folder``."""
     folder.mkdir(parents=True, exist_ok=True)
     for seed, symbol in enumerate(symbols):
-        make_raw_candles(minutes, seed).to_csv(folder / f"{symbol}-1m-2026-01.csv", header=False, index=False)
+        make_raw_candles(minutes, seed).to_csv(
+            folder / f"{symbol}-1m-2026-01.csv", header=False, index=False
+        )
     return folder
 
 
 def write_test_config(folder: Path, raw_dir: Path) -> Path:
     """Build disposable synthetic-test settings for a three-day sample; runtime SETTINGS remain in main.py."""
-    cfg = json.loads((PROJECT_ROOT / "tests/fixture_settings.json").read_text(encoding="utf-8"))
+    cfg = json.loads(
+        (PROJECT_ROOT / "tests/fixture_settings.json").read_text(encoding="utf-8")
+    )
     cfg["paths"] = {
         "raw_dir": str(raw_dir),
         "clean_data": str(folder / "data" / "processed" / "clean.csv"),
@@ -166,7 +176,9 @@ def fixture_raw_df(raw_dir: Path, cfg: dict) -> pd.DataFrame:
 def fixture_clean_df(raw_df: pd.DataFrame, columns: dict, rules: dict) -> pd.DataFrame:
     """Synthetic candles after clean_data."""
     clean_data = importlib.import_module("src.clean_data")  # same reason as raw_df
-    return clean_data.clean_dataframe(raw_df, columns=columns, rules=rules, drop_invalid=True)
+    return clean_data.clean_dataframe(
+        raw_df, columns=columns, rules=rules, drop_invalid=True
+    )
 
 
 @pytest.fixture(name="restore_root_logger", autouse=True)

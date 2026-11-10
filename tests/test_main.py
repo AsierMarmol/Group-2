@@ -53,11 +53,17 @@ def test_unit_chronological_split_purges_crossing_labels_and_preserves_alignment
     pd.testing.assert_frame_equal(frame, before)
 
 
-@pytest.mark.parametrize("case", ["stratify", "missing_dates", "misaligned", "naive", "bad_horizon"])
+@pytest.mark.parametrize(
+    "case", ["stratify", "missing_dates", "misaligned", "naive", "bad_horizon"]
+)
 def test_unit_split_rejects_unsafe_settings(case):
     frame = _split_frame()
     y = frame.original_row.copy()
-    kwargs = {"split_settings": _split_settings(), "time_column": "open_time", "horizon": 15}
+    kwargs = {
+        "split_settings": _split_settings(),
+        "time_column": "open_time",
+        "horizon": 15,
+    }
     if case == "missing_dates":
         kwargs["split_settings"] = None
     elif case == "misaligned":
@@ -72,13 +78,20 @@ def test_unit_split_rejects_unsafe_settings(case):
 
 def test_unit_gate_uses_relative_improvement_and_accepts_equality():
     settings = {"metric": "average_precision", "min_ratio_vs_benchmark": 1.2}
-    result = main.check_quality_gate({"average_precision": 0.36}, {"average_precision": 0.3}, settings)
+    result = main.check_quality_gate(
+        {"average_precision": 0.36}, {"average_precision": 0.3}, settings
+    )
     assert result["threshold"] == pytest.approx(0.36)
     assert result["passed"] is True
-    assert not main.check_quality_gate({"average_precision": 0.35}, {"average_precision": 0.3}, settings)["passed"]
+    assert not main.check_quality_gate(
+        {"average_precision": 0.35}, {"average_precision": 0.3}, settings
+    )["passed"]
 
 
-@pytest.mark.parametrize("case", ["nan_model", "infinite_benchmark", "test_gate", "wrong_direction", "bad_ratio"])
+@pytest.mark.parametrize(
+    "case",
+    ["nan_model", "infinite_benchmark", "test_gate", "wrong_direction", "bad_ratio"],
+)
 def test_unit_gate_rejects_invalid_evidence(case):
     gate = {"metric": "average_precision", "min_ratio_vs_benchmark": 1.2}
     scores, benchmark = {"average_precision": 0.5}, {"average_precision": 0.3}
@@ -98,7 +111,9 @@ def test_unit_gate_rejects_invalid_evidence(case):
 
 def test_unit_settings_are_portable_and_not_mutated(tmp_path):
     before = copy.deepcopy(main.SETTINGS)
-    resolved = main.resolved_settings(raw_dir=tmp_path / "external", output_root=tmp_path / "outputs")
+    resolved = main.resolved_settings(
+        raw_dir=tmp_path / "external", output_root=tmp_path / "outputs"
+    )
     assert all(path.is_absolute() for path in resolved["paths"].values())
     assert resolved["paths"]["raw_dir"] == tmp_path / "external"
     resolved["features"]["numeric"].append("changed")
@@ -116,10 +131,13 @@ def test_unit_training_cutoffs_exclude_later_and_purged_rows(cfg):
         frames.append(frame)
     settings = copy.deepcopy(main.SETTINGS)
     settings.update(cfg)
-    splits, cutoffs = main._labelled_splits(pd.concat(frames, ignore_index=True), settings)
+    splits, cutoffs = main._labelled_splits(
+        pd.concat(frames, ignore_index=True), settings
+    )
     eligible = np.arange(1425) % 10 + 1.0
     assert cutoffs == {
-        asset: pytest.approx(np.quantile(eligible, 0.9)) for asset in settings["rules"]["allowed_symbols"]
+        asset: pytest.approx(np.quantile(eligible, 0.9))
+        for asset in settings["rules"]["allowed_symbols"]
     }
     assert len(splits["train"]) == 1425 * 3
 
@@ -132,7 +150,9 @@ def test_unit_inventory_rejects_missing_asset_before_training(cfg):
         main.run_pipeline(settings)
 
 
-def test_integration_entrypoint_saves_failed_candidate_without_overwriting_accepted(cfg, monkeypatch):
+def test_integration_entrypoint_saves_failed_candidate_without_overwriting_accepted(
+    cfg, monkeypatch
+):
     settings = copy.deepcopy(main.SETTINGS)
     settings.update(cfg)
     settings["quality_gate"]["min_ratio_vs_benchmark"] = 1000.0
@@ -145,7 +165,9 @@ def test_integration_entrypoint_saves_failed_candidate_without_overwriting_accep
     def recorded_evaluation(*args, **kwargs):
         lock = settings["paths"]["metrics"].with_name("selection_lock.json")
         if calls:
-            assert lock.exists(), "Selection must be locked before final-period evaluation"
+            assert (
+                lock.exists()
+            ), "Selection must be locked before final-period evaluation"
             assert json.loads(lock.read_text())["quality_gate"]["passed"] is False
         calls.append(True)
         return evaluate_model(*args, **kwargs)
@@ -166,21 +188,44 @@ def test_integration_entrypoint_saves_failed_candidate_without_overwriting_accep
     assert "future_rv" not in bundle["metadata"]["predictor_order"]
     assert "high_volatility" not in bundle["metadata"]["predictor_order"]
     assert report["validation"]["average_precision"] == pytest.approx(
-        np.mean([report["validation"][f"average_precision_{asset}"] for asset in ["BTCUSDT", "ETHUSDT", "SOLUSDT"]])
+        np.mean(
+            [
+                report["validation"][f"average_precision_{asset}"]
+                for asset in ["BTCUSDT", "ETHUSDT", "SOLUSDT"]
+            ]
+        )
     )
     predictions = pd.read_csv(settings["paths"]["predictions"])
     assert len(predictions) == report["rows"]["test"]
-    assert predictions.columns.tolist() == ["symbol", "open_time", "prediction", "probability"]
+    assert predictions.columns.tolist() == [
+        "symbol",
+        "open_time",
+        "prediction",
+        "probability",
+    ]
     clean = pd.read_csv(settings["paths"]["clean_data"], parse_dates=["open_time"])
-    end = pd.to_datetime(predictions.loc[predictions.symbol == "BTCUSDT", "open_time"], utc=True).iloc[-1]
+    end = pd.to_datetime(
+        predictions.loc[predictions.symbol == "BTCUSDT", "open_time"], utc=True
+    ).iloc[-1]
     window = clean.loc[(clean.symbol == "BTCUSDT") & (clean.open_time <= end)].tail(60)
     window = window.rename(columns={"trade_count": "trades"})
-    columns = ["symbol", "open_time", "open", "high", "low", "close", "volume", "trades"]
+    columns = [
+        "symbol",
+        "open_time",
+        "open",
+        "high",
+        "low",
+        "close",
+        "volume",
+        "trades",
+    ]
     us, ms = window[columns].copy(), window[columns].copy()
     us["open_time"] = us.open_time.map(lambda t: t.value // 1000)
     ms["open_time"] = ms.open_time.map(lambda t: t.value // 1_000_000)
     payload = settings["paths"]["metrics"].with_name("raw-reload-check.json")
-    payload.write_text(json.dumps({"us": us.to_dict("records"), "ms": ms.to_dict("records")}))
+    payload.write_text(
+        json.dumps({"us": us.to_dict("records"), "ms": ms.to_dict("records")})
+    )
     script = (
         "import json,sys,pandas as pd; from src import infer; "
         "p=json.load(open(sys.argv[2])); "
@@ -189,7 +234,14 @@ def test_integration_entrypoint_saves_failed_candidate_without_overwriting_accep
         "assert a==b; print(json.dumps(a))"
     )
     result = subprocess.run(
-        [sys.executable, "-c", script, report["artifact"], str(payload), (end + pd.Timedelta(minutes=1)).isoformat()],
+        [
+            sys.executable,
+            "-c",
+            script,
+            report["artifact"],
+            str(payload),
+            (end + pd.Timedelta(minutes=1)).isoformat(),
+        ],
         cwd=Path(main.__file__).resolve().parents[1],
         capture_output=True,
         text=True,
@@ -197,6 +249,7 @@ def test_integration_entrypoint_saves_failed_candidate_without_overwriting_accep
     )
     score = json.loads(result.stdout)["risk_score"]
     expected = predictions.loc[
-        (predictions.symbol == "BTCUSDT") & (pd.to_datetime(predictions.open_time, utc=True) == end)
+        (predictions.symbol == "BTCUSDT")
+        & (pd.to_datetime(predictions.open_time, utc=True) == end)
     ]
     assert score == pytest.approx(expected.probability.iloc[0], abs=1e-12)

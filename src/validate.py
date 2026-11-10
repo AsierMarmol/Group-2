@@ -29,35 +29,55 @@ def _check_schema(df: pd.DataFrame, required: list[str], time_column: str) -> No
     if missing:
         raise ValueError(f"Missing required columns: {missing}")
     if not pd.api.types.is_datetime64_any_dtype(df[time_column]):
-        raise TypeError(f"Column '{time_column}' must hold datetimes, got {df[time_column].dtype}")
+        raise TypeError(
+            f"Column '{time_column}' must hold datetimes, got {df[time_column].dtype}"
+        )
 
 
 def _check_values(df: pd.DataFrame, columns: dict, rules: dict) -> None:
     """Check missing values, price and volume ranges, candle shape and symbols."""
     _fail_if_any(
-        df[[columns["symbol_col"], columns["time_col"], *rules["value_columns"]]].isna().any(axis=1),
+        df[[columns["symbol_col"], columns["time_col"], *rules["value_columns"]]]
+        .isna()
+        .any(axis=1),
         "have missing values",
     )
-    _fail_if_any((df[rules["positive_columns"]] <= 0).any(axis=1), "have a non-positive price")
-    _fail_if_any((df[rules["non_negative_columns"]] < 0).any(axis=1), "have a negative volume or trade count")
+    _fail_if_any(
+        (df[rules["positive_columns"]] <= 0).any(axis=1), "have a non-positive price"
+    )
+    _fail_if_any(
+        (df[rules["non_negative_columns"]] < 0).any(axis=1),
+        "have a negative volume or trade count",
+    )
     body = df[[columns["open_col"], columns["close_col"]]]
-    outside = (df[columns["high_col"]] < body.max(axis=1)) | (df[columns["low_col"]] > body.min(axis=1))
+    outside = (df[columns["high_col"]] < body.max(axis=1)) | (
+        df[columns["low_col"]] > body.min(axis=1)
+    )
     _fail_if_any(outside, "have an open or close outside the low-high range")
     _fail_if_any(
-        ~df[columns["symbol_col"]].isin(rules["allowed_symbols"]), f"have a symbol outside {rules['allowed_symbols']}"
+        ~df[columns["symbol_col"]].isin(rules["allowed_symbols"]),
+        f"have a symbol outside {rules['allowed_symbols']}",
     )
 
 
 def _check_time_order(df: pd.DataFrame, columns: dict, frequency: str) -> None:
     """Check candles are unique, sorted within each symbol and aligned to whole minutes."""
     symbol, time = (columns["symbol_col"], columns["time_col"])
-    _fail_if_any(df.duplicated(subset=[symbol, time]), "are duplicate candles (same symbol and time)")
+    _fail_if_any(
+        df.duplicated(subset=[symbol, time]),
+        "are duplicate candles (same symbol and time)",
+    )
     steps = df.groupby(symbol, sort=False)[time].diff()
     _fail_if_any(steps <= pd.Timedelta(0), "are out of time order within their symbol")
-    _fail_if_any(df[time] != df[time].dt.floor(frequency), f"are not aligned to {frequency} boundaries")
+    _fail_if_any(
+        df[time] != df[time].dt.floor(frequency),
+        f"are not aligned to {frequency} boundaries",
+    )
 
 
-def _validate_candles(df: pd.DataFrame, columns: dict, rules: dict, target_column: str | None = None) -> bool:
+def _validate_candles(
+    df: pd.DataFrame, columns: dict, rules: dict, target_column: str | None = None
+) -> bool:
     """Check clean candles against every rule in SETTINGS; never modify them.
 
     Args:
@@ -79,13 +99,22 @@ def _validate_candles(df: pd.DataFrame, columns: dict, rules: dict, target_colum
     _check_schema(df, required, columns["time_col"])
     if str(df[columns["time_col"]].dt.tz) != "UTC":
         raise ValueError("Opening times must be timezone-aware UTC")
-    _fail_if_any(np.isinf(df[rules["value_columns"]]).any(axis=1), "have nonfinite values")
+    _fail_if_any(
+        np.isinf(df[rules["value_columns"]]).any(axis=1), "have nonfinite values"
+    )
     _fail_if_any(df[columns["trades_col"]].mod(1).ne(0), "have fractional trade counts")
     _check_values(df, columns, rules)
     _check_time_order(df, columns, rules["frequency"])
     if target_column:
-        _fail_if_any(~df[target_column].isin(rules["target_values"]), f"have a target outside {rules['target_values']}")
-    logger.info("Validation passed: %d rows, %d symbols", len(df), df[columns["symbol_col"]].nunique())
+        _fail_if_any(
+            ~df[target_column].isin(rules["target_values"]),
+            f"have a target outside {rules['target_values']}",
+        )
+    logger.info(
+        "Validation passed: %d rows, %d symbols",
+        len(df),
+        df[columns["symbol_col"]].nunique(),
+    )
     return True
 
 

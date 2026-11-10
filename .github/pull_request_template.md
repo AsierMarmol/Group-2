@@ -20,7 +20,8 @@
 - [ ] No datasets, generated models/reports/logs, secrets, or caches are committed.
 - [ ] Pipeline execution is verified when applicable; otherwise explain why it was not run.
 
-<!-- Coverage is diagnostic: no course coverage minimum is assumed.
+<!-- Report statement and branch coverage separately; supplied rubric: 90% branch gate, 95% full marks.
+Report Pylint, Radon, Black/isort and secret-scan findings honestly; never suppress checks to raise a score.
 Documentation/setup PRs should explain nonapplicable checks rather than claiming tests passed.
 Final integration requires all dependency tests active and passing.
 Member branch reuse is an agreed exception to the teacher's branch-per-module workflow. -->

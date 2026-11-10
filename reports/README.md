@@ -10,6 +10,8 @@ predictions.csv begins with symbol and UTC open_time, followed by prediction and
 probability is an uncalibrated risk score; the estimator-default prediction is not an approved warning policy.
 The final period has prior analytical exposure and must not guide tuning or be called an untouched holdout.
 Generated reports are ignored by Git. Keep actual run measurements and limitations in the main README.
+Grading coverage, JUnit, Pylint, complexity and secret-scan outputs also belong here and remain untracked.
+Inspect the coverage JSON's percent_branches_covered field; the combined TOTAL is a different measure.
 
 `open_time` identifies the final input candle, not the prediction decision time.
 Decision time is that opening plus one minute; the 15-minute outcome matures 15 minutes after the decision.

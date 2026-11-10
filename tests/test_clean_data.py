@@ -8,6 +8,7 @@ the index is reset; a missing column raises a clear error; cleaning twice change
 import numpy as np
 import pandas as pd
 import pytest
+
 from src.clean_data import _clean_candles as clean_dataframe
 from src.clean_data import to_utc_datetime
 from src.load_data import load_raw_data
@@ -43,7 +44,9 @@ def test_unit_clean_output_is_sorted_with_fresh_index(raw_df, columns, rules):
     shuffled = raw_df.sample(frac=1.0, random_state=0)
     clean = clean_dataframe(shuffled, columns, rules)
     assert list(clean.index) == list(range(len(clean)))
-    assert clean.equals(clean.sort_values(["symbol", "open_time"]).reset_index(drop=True))
+    assert clean.equals(
+        clean.sort_values(["symbol", "open_time"]).reset_index(drop=True)
+    )
 
 
 def test_unit_clean_drops_bad_rows_and_counts_them(raw_df, columns, rules, caplog):
@@ -114,10 +117,14 @@ def test_unit_cleaning_twice_gives_the_same_result(raw_df, columns, rules):
     pd.testing.assert_frame_equal(once, twice)
 
 
-def test_integration_clean_loaded_files_with_repeated_lines(raw_dir, cfg, columns, rules):
+def test_integration_clean_loaded_files_with_repeated_lines(
+    raw_dir, cfg, columns, rules
+):
     """Integration test: clean loaded files with repeated lines."""
     first = sorted(raw_dir.iterdir())[0]
-    first.write_text(first.read_text(encoding="utf-8") * 2, encoding="utf-8")  # every line twice
+    first.write_text(
+        first.read_text(encoding="utf-8") * 2, encoding="utf-8"
+    )  # every line twice
     raw = load_raw_data(raw_dir, cfg["data"], columns["symbol_col"])
     clean = clean_dataframe(raw, columns, rules)
     assert len(raw) == 4 * 3 * 24 * 60

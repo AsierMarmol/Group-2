@@ -10,8 +10,17 @@ import json
 import pandas as pd
 import pytest
 from sklearn.linear_model import LogisticRegression
+
 from src.utils import _save_model_returning_path as save_model
-from src.utils import check_input_file, ensure_parent_dir, file_sha256, load_model, read_csv, write_csv, write_json
+from src.utils import (
+    check_input_file,
+    ensure_parent_dir,
+    file_sha256,
+    load_model,
+    read_csv,
+    write_csv,
+    write_json,
+)
 
 
 def test_unit_ensure_parent_dir_creates_missing_folders(tmp_path):
@@ -63,8 +72,13 @@ def test_unit_write_csv_rejects_non_dataframes(tmp_path):
 
 def test_unit_write_json_writes_readable_json(tmp_path):
     """Unit test: write_json writes readable json."""
-    path = write_json({"score": 0.5, "when": pd.Timestamp("2026-01-01")}, tmp_path / "r" / "m.json")
-    assert json.loads(path.read_text(encoding="utf-8")) == {"score": 0.5, "when": "2026-01-01 00:00:00"}
+    path = write_json(
+        {"score": 0.5, "when": pd.Timestamp("2026-01-01")}, tmp_path / "r" / "m.json"
+    )
+    assert json.loads(path.read_text(encoding="utf-8")) == {
+        "score": 0.5,
+        "when": "2026-01-01 00:00:00",
+    }
 
 
 def test_unit_write_json_rejects_non_dicts(tmp_path):
