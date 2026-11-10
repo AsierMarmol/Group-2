@@ -9,6 +9,7 @@ import re
 from pathlib import Path
 
 import pandas as pd
+
 from src import utils
 
 logger = logging.getLogger(__name__)
@@ -36,7 +37,9 @@ def symbol_from_filename(path: Path, symbol_regex: str) -> str:
     name = Path(path).name
     match = re.match(symbol_regex, name)
     if match is None:
-        raise ValueError(f"Cannot read a symbol from file name '{name}' with pattern '{symbol_regex}'")
+        raise ValueError(
+            f"Cannot read a symbol from file name '{name}' with pattern '{symbol_regex}'"
+        )
     return match.group(1)
 
 
@@ -64,13 +67,17 @@ def read_candle_file(path: Path, column_names: list[str]) -> pd.DataFrame:
     except pd.errors.EmptyDataError as error:
         raise ValueError(f"No candle rows in {path}") from error
     if df.shape[1] != len(column_names):
-        raise ValueError(f"{path.name} has {df.shape[1]} columns, expected {len(column_names)}: {column_names}")
+        raise ValueError(
+            f"{path.name} has {df.shape[1]} columns, expected {len(column_names)}: {column_names}"
+        )
     df.columns = list(column_names)
     return df
 
 
 def load_raw_data(
-    raw_data_path: Path, data_settings: dict | None = None, symbol_column: str | None = None
+    raw_data_path: Path,
+    data_settings: dict | None = None,
+    symbol_column: str | None = None,
 ) -> pd.DataFrame:
     """Inputs: raw_data_path, data_settings, symbol_column.
     Outputs: Raw DataFrame; source files are never changed.
@@ -82,7 +89,9 @@ def load_raw_data(
         raise ValueError("A symbol column is required for candle-folder loading")
     column_names = list(data_settings["raw_columns"])
     if symbol_column in column_names:
-        raise ValueError(f"Symbol column '{symbol_column}' clashes with a raw column name")
+        raise ValueError(
+            f"Symbol column '{symbol_column}' clashes with a raw column name"
+        )
     frames = []
     for path in list_raw_files(raw_dir, data_settings["file_pattern"]):
         frame = read_candle_file(path, column_names)

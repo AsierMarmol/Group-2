@@ -6,6 +6,7 @@ Valid data passes; every broken rule raises an error that names it; the data is 
 
 import pandas as pd
 import pytest
+
 from src.validate import _validate_candles as validate_dataframe
 
 
@@ -99,7 +100,9 @@ def test_unit_checks_target_values_when_asked(clean_df, columns, rules):
     """Unit test: checks target values when asked."""
     df = clean_df.copy()
     df["high_volatility"] = 0
-    assert validate_dataframe(df, columns, rules, target_column="high_volatility") is True
+    assert (
+        validate_dataframe(df, columns, rules, target_column="high_volatility") is True
+    )
     df.loc[3, "high_volatility"] = 2
     with pytest.raises(ValueError, match="target outside"):
         validate_dataframe(df, columns, rules, target_column="high_volatility")
@@ -111,7 +114,9 @@ def test_unit_rejects_a_missing_target_column(clean_df, columns, rules):
         validate_dataframe(clean_df, columns, rules, target_column="high_volatility")
 
 
-def test_integration_validation_stops_data_that_skipped_cleaning(raw_df, columns, rules):
+def test_integration_validation_stops_data_that_skipped_cleaning(
+    raw_df, columns, rules
+):
     """Integration test: validation stops data that skipped cleaning."""
     with pytest.raises(TypeError, match="must hold datetimes"):
         validate_dataframe(raw_df, columns, rules)

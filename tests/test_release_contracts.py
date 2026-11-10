@@ -17,7 +17,9 @@ def test_unit_raw_contract_rejects_missing_asset_inside_window():
     window = make_clean_candles(60).rename(columns={"trade_count": "trades"})
     window.loc[20, "symbol"] = None
     with pytest.raises(ValueError, match="symbol"):
-        candle_contract.normalize_candles(window, allowed_symbols=["BTCUSDT", "ETHUSDT", "SOLUSDT"])
+        candle_contract.normalize_candles(
+            window, allowed_symbols=["BTCUSDT", "ETHUSDT", "SOLUSDT"]
+        )
     with pytest.raises(ValueError, match="[Ss]ymbol"):
         candle_contract.normalize_candles(window, symbol="BTCUSDT")
     with pytest.raises(ValueError, match="asset"):
@@ -27,7 +29,12 @@ def test_unit_raw_contract_rejects_missing_asset_inside_window():
 def test_integration_public_io_preprocessor_training_and_inference(tmp_path):
     from src import features, infer, train, utils
 
-    frame = pd.DataFrame({"return_1": np.linspace(-1, 1, 90), "symbol": ["BTCUSDT", "ETHUSDT", "SOLUSDT"] * 30})
+    frame = pd.DataFrame(
+        {
+            "return_1": np.linspace(-1, 1, 90),
+            "symbol": ["BTCUSDT", "ETHUSDT", "SOLUSDT"] * 30,
+        }
+    )
     before = frame.copy(deep=True)
     csv_path = tmp_path / "csv" / "features.csv"
     assert utils.save_csv(df=frame, filepath=csv_path) is None
@@ -48,7 +55,9 @@ def test_integration_public_io_preprocessor_training_and_inference(tmp_path):
         random_state=42,
     )
     with pytest.raises(NotFittedError):
-        check_is_fitted(recipe)  # Training must clone rather than mutate the unfitted recipe.
+        check_is_fitted(
+            recipe
+        )  # Training must clone rather than mutate the unfitted recipe.
     expected_mean = frame.return_1.mean()
     scaler = model.named_steps["preprocess"].named_transformers_["numeric"]
     assert scaler.mean_[0] == pytest.approx(expected_mean)
@@ -63,7 +72,9 @@ def test_integration_public_io_preprocessor_training_and_inference(tmp_path):
     assert restored.columns.tolist() == ["prediction", "probability"]
     assert infer.run_inference(loaded, rows).columns.tolist() == ["prediction"]
     infer.run_inference(loaded, rows.assign(return_1=1_000_000), include_proba=True)
-    assert loaded.named_steps["preprocess"].named_transformers_["numeric"].mean_[0] == pytest.approx(expected_mean)
+    assert loaded.named_steps["preprocess"].named_transformers_["numeric"].mean_[
+        0
+    ] == pytest.approx(expected_mean)
     with pytest.raises(ValueError, match="unknown"):
         infer.run_inference(loaded, rows.assign(symbol="DOGEUSDT"))
     for groups in [([], []), (["same"], ["same"])]:
@@ -93,7 +104,10 @@ def test_integration_raw_reload_accepts_units_and_rejects_invalid_requests(cfg):
     for unit, divisor in [("us", 1000), ("ms", 1_000_000)]:
         encoded = window.copy()
         encoded["open_time"] = encoded.open_time.map(lambda time: time.value // divisor)
-        assert infer.score_candles(encoded, report["artifact"], decision, unit=unit) == original
+        assert (
+            infer.score_candles(encoded, report["artifact"], decision, unit=unit)
+            == original
+        )
     fractional = window.copy()
     fractional["trades"] = fractional.trades.astype(float)
     fractional.loc[20, "trades"] = 1.5
@@ -114,26 +128,39 @@ def test_integration_raw_reload_accepts_units_and_rejects_invalid_requests(cfg):
         "unsupported symbol": window.assign(symbol="DOGEUSDT"),
         "missing symbol": missing_symbol,
         "missing field": window.drop(columns="close"),
-        "naive timestamps": window.assign(open_time=window.open_time.dt.tz_localize(None)),
-        "off-minute": window.assign(open_time=window.open_time + pd.Timedelta(seconds=1)),
+        "naive timestamps": window.assign(
+            open_time=window.open_time.dt.tz_localize(None)
+        ),
+        "off-minute": window.assign(
+            open_time=window.open_time + pd.Timedelta(seconds=1)
+        ),
     }
     for name, frame in cases.items():
         with pytest.raises(ValueError) as caught:
             infer.score_candles(frame, report["artifact"], decision)
         assert str(caught.value), name
     with pytest.raises(ValueError, match="completed"):
-        infer.score_candles(window, report["artifact"], decision - pd.Timedelta(nanoseconds=1))
+        infer.score_candles(
+            window, report["artifact"], decision - pd.Timedelta(nanoseconds=1)
+        )
     with pytest.raises(ValueError, match="timezone"):
         infer.score_candles(window, report["artifact"], decision.tz_localize(None))
     with pytest.raises(ValueError, match="explicit"):
         candle_contract.predict_candles(window, bundle, mode="replay")
     with pytest.raises(ValueError, match="not approved"):
-        candle_contract.predict_candles(window, bundle, mode="live", as_of=decision, max_age_seconds=60)
+        candle_contract.predict_candles(
+            window, bundle, mode="live", as_of=decision, max_age_seconds=60
+        )
     # An in-memory test flag exercises policy checks; it is never written to an artifact.
-    approved = {"model": bundle["model"], "metadata": {**bundle["metadata"], "approval_status": "approved"}}
+    approved = {
+        "model": bundle["model"],
+        "metadata": {**bundle["metadata"], "approval_status": "approved"},
+    }
     for limit in [None, -1, float("inf")]:
         with pytest.raises(ValueError, match="freshness"):
-            candle_contract.predict_candles(window, approved, mode="live", as_of=decision, max_age_seconds=limit)
+            candle_contract.predict_candles(
+                window, approved, mode="live", as_of=decision, max_age_seconds=limit
+            )
     with pytest.raises(ValueError, match="Stale"):
         candle_contract.predict_candles(
             window,

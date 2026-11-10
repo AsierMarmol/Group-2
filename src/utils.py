@@ -92,7 +92,8 @@ def _save_model_returning_path(model: Any, path: Path) -> Path:
 def file_sha256(path: Path) -> str:
     """Inputs: path.
     Outputs: the annotated return value or a validation error.
-    Why: Return the SHA-256 checksum of a file, read in chunks so large files fit in memory."""
+    Why: Return the SHA-256 checksum of a file, read in chunks so large files fit in memory.
+    """
     path = check_input_file(path)
     digest = hashlib.sha256()
     with path.open("rb") as handle:

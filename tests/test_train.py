@@ -13,13 +13,22 @@ from sklearn.exceptions import NotFittedError
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 from sklearn.utils.validation import check_is_fitted
+
 from src.features import add_lookback_features, get_feature_preprocessor
 from src.target import add_future_volatility, assign_target, fit_volatility_cutoffs
 from src.train import _train_configured_model as train_model
 from src.train import build_estimator
 
-LOGISTIC = {"model_type": "logistic_regression", "random_state": 0, "params": {"max_iter": 200}}
-BOOSTING = {"model_type": "hist_gradient_boosting", "random_state": 0, "params": {"max_iter": 10}}
+LOGISTIC = {
+    "model_type": "logistic_regression",
+    "random_state": 0,
+    "params": {"max_iter": 200},
+}
+BOOSTING = {
+    "model_type": "hist_gradient_boosting",
+    "random_state": 0,
+    "params": {"max_iter": 10},
+}
 
 
 def _toy(rows=300, seed=0):
@@ -49,7 +58,9 @@ def test_unit_build_estimator_uses_type_params_and_seed():
 
 def test_unit_build_estimator_accepts_missing_params():
     """Unit test: build_estimator accepts missing params."""
-    model = build_estimator({"model_type": "logistic_regression", "random_state": 1, "params": None})
+    model = build_estimator(
+        {"model_type": "logistic_regression", "random_state": 1, "params": None}
+    )
     assert model.random_state == 1
 
 
@@ -102,9 +113,19 @@ def test_unit_train_rejects_bad_training_data():
 def test_integration_train_on_pipeline_features(clean_df, columns):
     """Integration test: train on pipeline features."""
     table = add_lookback_features(
-        add_future_volatility(clean_df, columns, 15, "1min"), columns, {"short": 15, "long": 60}, "1min"
+        add_future_volatility(clean_df, columns, 15, "1min"),
+        columns,
+        {"short": 15, "long": 60},
+        "1min",
     )
-    labelled = assign_target(table, columns, fit_volatility_cutoffs(table, columns, 0.9))
+    labelled = assign_target(
+        table, columns, fit_volatility_cutoffs(table, columns, 0.9)
+    )
     numeric = ["return_1", "rv_15", "rv_60c_59r", "range_mean_60", "volume_ratio_5_60"]
-    model = train_model(labelled, labelled["high_volatility"], get_feature_preprocessor(numeric, ["symbol"]), BOOSTING)
+    model = train_model(
+        labelled,
+        labelled["high_volatility"],
+        get_feature_preprocessor(numeric, ["symbol"]),
+        BOOSTING,
+    )
     assert model.predict_proba(labelled).shape == (len(labelled), 2)

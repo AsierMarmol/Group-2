@@ -14,7 +14,10 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 
 logger = logging.getLogger(__name__)
-MODEL_REGISTRY = {"hist_gradient_boosting": HistGradientBoostingClassifier, "logistic_regression": LogisticRegression}
+MODEL_REGISTRY = {
+    "hist_gradient_boosting": HistGradientBoostingClassifier,
+    "logistic_regression": LogisticRegression,
+}
 
 
 def build_estimator(training: dict) -> object:
@@ -23,7 +26,9 @@ def build_estimator(training: dict) -> object:
     Why: Create the unfitted classifier named in SETTINGS."""
     model_type = training["model_type"]
     if model_type not in MODEL_REGISTRY:
-        raise ValueError(f"Unknown model_type '{model_type}'; choose one of {sorted(MODEL_REGISTRY)}")
+        raise ValueError(
+            f"Unknown model_type '{model_type}'; choose one of {sorted(MODEL_REGISTRY)}"
+        )
     params = dict(training.get("params") or {})
     params["random_state"] = training["random_state"]
     return MODEL_REGISTRY[model_type](**params)
@@ -36,7 +41,9 @@ def _check_training_data(x_train: pd.DataFrame, y_train: pd.Series) -> None:
     if x_train.empty:
         raise ValueError("x_train has no rows")
     if len(x_train) != len(y_train):
-        raise ValueError(f"x_train has {len(x_train)} rows but y_train has {len(y_train)}")
+        raise ValueError(
+            f"x_train has {len(x_train)} rows but y_train has {len(y_train)}"
+        )
     if pd.Series(y_train).nunique() < 2:
         raise ValueError("y_train needs both classes (0 and 1) to train a classifier")
 
@@ -64,7 +71,10 @@ def _train_configured_model(
         y_train,
         recipe,
         "classification",
-        model_params={"model_type": training["model_type"], **training.get("params", {})},
+        model_params={
+            "model_type": training["model_type"],
+            **training.get("params", {}),
+        },
         random_state=training["random_state"],
     )
 
@@ -89,7 +99,9 @@ def train_model(
         raise ValueError("Training labels must be 0 and 1")
     settings = dict(model_params or {})
     model_type = settings.pop("model_type", "logistic_regression")
-    model = build_estimator({"model_type": model_type, "params": settings, "random_state": random_state})
+    model = build_estimator(
+        {"model_type": model_type, "params": settings, "random_state": random_state}
+    )
     fitted = Pipeline([("preprocess", clone(preprocessor)), ("model", model)])
     fitted.fit(X_train, y_train)
     return fitted

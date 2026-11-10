@@ -69,7 +69,13 @@ Open the repository root in VS Code. In **Terminal > New Terminal**:
 conda env create -f environment.yml
 conda activate crypto-volatility-mlops
 python -m pytest -vv
-python -m flake8 src tests
+python -m flake8 --isolated --max-line-length=120 --extend-ignore=E203 src tests
+python -m pytest --cov=src --cov-branch --cov-report=term-missing
+python -m pylint src
+python -m radon cc -s -a src
+python -m black --check src tests
+python -m isort --check-only src tests
+python -m detect_secrets scan
 python -m src.main
 ```
 
@@ -116,8 +122,8 @@ a separate notebook. Record the actual environment and execution results during 
 
 Verified on Windows with Python 3.12.16 in the team Conda environment:
 
-- 109 tests passed, zero failures/errors/skips; full source/test Flake8 and dependency checks passed.
-- Diagnostic statement/branch coverage: 90% overall, 91% for `src/main.py`. No course minimum is assumed.
+- Current suite and exact statement/branch coverage are recorded in the grading verification below.
+- Full source/test Flake8 and dependency checks passed; coverage is measured separately for statements and branches.
 - All 54 CSVs loaded: 2,367,360 candles; no large dataset copy was made.
 - Eligible rows: training 1,576,578; validation 393,078; historical final period 397,398.
 - Validation macro AP: model 0.514824, benchmark 0.408660, required threshold 0.490392; gate passed.
@@ -138,6 +144,27 @@ The exact cause was not isolated; do not require cross-platform bit-for-bit mode
 The course LICENSE placeholder is unchanged; no open-source license or new reuse permissions are claimed.
 Business benefit, calibration, client ownership, service limits and licensing decisions remain explicit open items.
 They do not represent implemented later-stage functionality.
+
+### Grading-tool verification — 10 November 2026
+
+- 150 tests passed, zero failures/errors/skips. The suite includes real synthetic end-to-end `main()` execution.
+- Statement coverage: **99.87%** (750/751); branch outcomes: **99.29%** (280/282), measured separately.
+  This exceeds the supplied slides' 90% branch gate and 95% full-coverage criterion. No exclusions were added.
+- Exact isolated Flake8 command: no violations. Black and isort checks passed with consistent 88-column layout.
+- Pylint 4.1.3: **9.75/10**, above the slides' 9.5 full-mark criterion. Remaining warnings concern preserved public
+  contract names/argument counts, compatibility arguments, local-variable counts and a docstring length; none are suppressed.
+- Radon 6.0.1: average **A (4.35)**; no function exceeds complexity 10.
+- detect-secrets 1.5.0 reports one high-entropy string in the frozen notebook's embedded PNG. Inspection confirms
+  image data, not a credential. The notebook and finding are preserved; an empty scanner result is not claimed.
+- Both frozen notebooks reran from clean kernels after the refactors; source cells, metadata and committed outputs
+  remain unchanged. The full pipeline reproduced the validation/final AP above, and all three assets passed a fresh
+  artifact reload with fitting disabled, source/artifact checksum validation and microsecond/millisecond score parity.
+
+The remaining uncovered paths are the default raw-directory selection and the CLI guard in `main.py`;
+the real CLI was separately exercised on the full dataset. Local tool versions and a public rubric do not establish
+the outcome of the teacher's unavailable private grader. Manual mentoring, reused branches, prior final-period exposure
+and unresolved business/service decisions remain disclosed. YAML migration and logging extensions are later-deliverable
+work, as confirmed for the current scope. No deferred infrastructure or model optimisation was added.
 
 ## 3. Team integration
 

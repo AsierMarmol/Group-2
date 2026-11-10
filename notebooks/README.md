@@ -56,3 +56,6 @@ The final corrections add automated public-interface/input-rejection checks and 
 a raw window. The notebook demos are a small sample, not the entire automated regression suite.
 Committed outputs and the diagnostic figure record Selin's macOS run; they are not relabelled as Windows outputs.
 Source-code release review remains separate from model approval, calibration and later deployment work.
+
+Both frozen notebooks were re-executed from clean kernels after the grading refactors on 10 November 2026.
+Public interfaces, scientific SETTINGS and notebook contents were preserved; standalone/modular parity checks passed.

@@ -3,6 +3,7 @@
 import numpy as np
 import pandas as pd
 import pytest
+
 from src import candle_contract, clean_data, features
 from tests.conftest import make_clean_candles
 
@@ -31,7 +32,11 @@ def test_gap_and_assets():
 def test_builder_does_not_mutate(clean_df, columns, cfg):
     before = clean_df.copy()
     out = features.add_lookback_features(
-        clean_df, columns, cfg["features"]["windows"], "1min", cfg["features"]["parameters"]
+        clean_df,
+        columns,
+        cfg["features"]["windows"],
+        "1min",
+        cfg["features"]["parameters"],
     )
     assert np.isfinite(out[cfg["features"]["numeric"]]).all().all()
     pd.testing.assert_frame_equal(before, clean_df)
@@ -41,4 +46,6 @@ def test_conflicting_duplicate(raw_df, columns, rules):
     extra = raw_df.iloc[[0]].copy()
     extra["volume"] += 1
     with pytest.raises(ValueError, match="Conflicting"):
-        clean_data.clean_dataframe(pd.concat([raw_df, extra]), columns=columns, rules=rules, drop_invalid=True)
+        clean_data.clean_dataframe(
+            pd.concat([raw_df, extra]), columns=columns, rules=rules, drop_invalid=True
+        )

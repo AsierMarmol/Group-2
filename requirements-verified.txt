@@ -67,3 +67,18 @@ traitlets==5.16.1
 typing_extensions==4.16.0
 tzdata==2026.6
 wcwidth==0.9.4
+
+# Additional installed grading tools and their verified dependencies.
+astroid==4.3.4
+certifi==2026.10.23
+charset-normalizer==3.5.2
+detect-secrets==1.5.0
+dill==0.4.1
+idna==3.20
+mando==0.7.1
+pylint==4.1.3
+radon==6.0.1
+requests==2.34.2
+six==1.17.0
+tomlkit==0.15.2
+urllib3==2.8.0

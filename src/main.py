@@ -2,7 +2,8 @@
 Inputs: project-relative SETTINGS and an optional ML_RAW_DIR override.
 Outputs: clean candles, diagnostic scores, metrics and a reproducible candidate bundle.
 Used by: python -m src.main and the modular notebook.
-Why: keep chronological boundaries, training-only learning and artifact handoffs explicit."""
+Why: keep chronological boundaries, training-only learning and artifact handoffs explicit.
+"""
 
 import copy
 import hashlib
@@ -66,14 +67,26 @@ SETTINGS = {
         "frequency": "1min",
         "close_time_column": "close_time",
         "microseconds_above": 100000000000000.0,
-        "value_columns": ["open", "high", "low", "close", "volume", "quote_volume", "trade_count"],
+        "value_columns": [
+            "open",
+            "high",
+            "low",
+            "close",
+            "volume",
+            "quote_volume",
+            "trade_count",
+        ],
         "positive_columns": ["open", "high", "low", "close"],
         "non_negative_columns": ["volume", "quote_volume", "trade_count"],
         "allowed_symbols": ["BTCUSDT", "ETHUSDT", "SOLUSDT"],
         "target_values": [0, 1],
     },
     "features": {
-        "parameters": {"return_windows": (1, 5, 15, 30), "rv_windows": (5, 15, 30), "activity_short": 5},
+        "parameters": {
+            "return_windows": (1, 5, 15, 30),
+            "rv_windows": (5, 15, 30),
+            "activity_short": 5,
+        },
         "windows": {"short": 15, "long": 60},
         "numeric": [
             "return_1",
@@ -95,7 +108,10 @@ SETTINGS = {
         "categorical": ["symbol"],
     },
     "target": {"horizon": 15, "quantile": 0.9},
-    "split": {"train_end": "2026-03-31 23:59:00", "validation_end": "2026-06-30 23:59:00"},
+    "split": {
+        "train_end": "2026-03-31 23:59:00",
+        "validation_end": "2026-06-30 23:59:00",
+    },
     "training": {
         "model_type": "hist_gradient_boosting",
         "random_state": 42,
@@ -122,67 +138,118 @@ SETTINGS = {
         "activity": "5-candle mean / 60-candle mean, volume/trades",
         "calendar": "cyclical UTC decision hour and weekday",
     },
-    "scope": {"start": "2025-04-01", "end_exclusive": "2026-10-01", "expected_months": 18},
+    "scope": {
+        "start": "2025-04-01",
+        "end_exclusive": "2026-10-01",
+        "expected_months": 18,
+    },
 }
 
 
-def split_by_time(table: pd.DataFrame, time_column: str, split: dict, horizon: int, frequency: str) -> dict:
-    """Inputs: candle table, UTC time column, inclusive split dates, horizon and frequency.
-    Outputs: Chronological partitions excluding outcomes that cross their ending boundary.
-    Why: Assign by prediction decision time and keep future labels within their own period."""
+def _split_step(times: pd.Series, horizon: int, frequency: str) -> pd.Timedelta:
+    """Validate the forecast horizon and canonical UTC opening-time series."""
     if isinstance(horizon, bool) or int(horizon) != horizon or horizon < 1:
         raise ValueError("Horizon must be a positive integer")
     step = pd.Timedelta(frequency)
     if step <= pd.Timedelta(0):
         raise ValueError("Frequency must be positive")
-    times = table[time_column]
-    if not isinstance(times.dtype, pd.DatetimeTZDtype) or str(times.dt.tz) != "UTC" or times.isna().any():
-        raise ValueError("Split opening times must be timezone-aware UTC with no missing values")
-    train_stop = pd.Timestamp(split["train_end"])
-    validation_stop = pd.Timestamp(split["validation_end"])
-    train_stop = train_stop.tz_localize("UTC") if train_stop.tzinfo is None else train_stop.tz_convert("UTC")
-    validation_stop = (
-        validation_stop.tz_localize("UTC") if validation_stop.tzinfo is None else validation_stop.tz_convert("UTC")
+    if (
+        not isinstance(times.dtype, pd.DatetimeTZDtype)
+        or str(times.dt.tz) != "UTC"
+        or times.isna().any()
+    ):
+        raise ValueError(
+            "Split opening times must be timezone-aware UTC with no missing values"
+        )
+    return step
+
+
+def _utc_boundary(value: str) -> pd.Timestamp:
+    """Interpret a configured calendar boundary in UTC without discarding timezone information."""
+    boundary = pd.Timestamp(value)
+    return (
+        boundary.tz_localize("UTC")
+        if boundary.tzinfo is None
+        else boundary.tz_convert("UTC")
     )
+
+
+def split_by_time(
+    table: pd.DataFrame, time_column: str, split: dict, horizon: int, frequency: str
+) -> dict:
+    """Inputs: candle table, UTC time column, inclusive split dates, horizon and frequency.
+    Outputs: Chronological partitions excluding outcomes that cross their ending boundary.
+    Why: Assign by prediction decision time and keep future labels within their own period.
+    """
+    times = table[time_column]
+    step = _split_step(times, horizon, frequency)
+    train_stop = _utc_boundary(split["train_end"])
+    validation_stop = _utc_boundary(split["validation_end"])
     # SETTINGS dates name the final decision minute; the next period starts one minute later.
     train_stop, validation_stop = train_stop + step, validation_stop + step
     if not train_stop < validation_stop:
-        raise ValueError("Training boundary must precede validation boundary in SETTINGS['split']")
+        raise ValueError(
+            "Training boundary must precede validation boundary in SETTINGS['split']"
+        )
     decision = times + step
     outcome_available = decision + int(horizon) * step
     parts = {
         "train": table[(decision < train_stop) & (outcome_available <= train_stop)],
         "validation": table[
-            (decision >= train_stop) & (decision < validation_stop) & (outcome_available <= validation_stop)
+            (decision >= train_stop)
+            & (decision < validation_stop)
+            & (outcome_available <= validation_stop)
         ],
         "test": table[decision >= validation_stop],
     }
     empty = [name for name, part in parts.items() if part.empty]
     if empty:
-        raise ValueError(f"Empty split(s) {empty}: check SETTINGS['split'] and the available dates")
+        raise ValueError(
+            f"Empty split(s) {empty}: check SETTINGS['split'] and the available dates"
+        )
     removed = len(table) - sum(len(part) for part in parts.values())
-    logger.info("Chronological split: %s; %d boundary rows purged", {k: len(v) for k, v in parts.items()}, removed)
+    logger.info(
+        "Chronological split: %s; %d boundary rows purged",
+        {k: len(v) for k, v in parts.items()},
+        removed,
+    )
     # Stable sorting keeps the canonical asset order on equal timestamps.
-    return {name: part.sort_values(time_column, kind="stable").reset_index(drop=True) for name, part in parts.items()}
+    return {
+        name: part.sort_values(time_column, kind="stable").reset_index(drop=True)
+        for name, part in parts.items()
+    }
 
 
-def check_quality_gate(metrics: dict, benchmark: dict, gate: dict) -> dict:
-    """Inputs: validation metrics, same-row benchmark metrics and gate settings.
-    Outputs: Model AP, benchmark AP, relative threshold and a Boolean gate result.
-    Why: A validation gate pass records candidate quality, never automatic release approval."""
+def _gate_ratio(gate: dict) -> float:
+    """Require the agreed validation metric, comparison direction and minimum improvement."""
     if gate.get("direction", "higher_is_better") != "higher_is_better":
         raise ValueError("This project's AP quality gate requires higher_is_better")
     if gate.get("split", "validation") != "validation":
         raise ValueError("The quality gate must use validation, never the final period")
     ratio = float(gate["min_ratio_vs_benchmark"])
     if not math.isfinite(ratio) or ratio < 1.2:
-        raise ValueError("Quality-gate ratio must be finite and at least the agreed 1.20")
-    name = gate["metric"]
-    if name != "average_precision":
+        raise ValueError(
+            "Quality-gate ratio must be finite and at least the agreed 1.20"
+        )
+    if gate["metric"] != "average_precision":
         raise ValueError("The agreed quality metric is average_precision")
+    return ratio
+
+
+def check_quality_gate(metrics: dict, benchmark: dict, gate: dict) -> dict:
+    """Inputs: validation metrics, same-row benchmark metrics and gate settings.
+    Outputs: Model AP, benchmark AP, relative threshold and a Boolean gate result.
+    Why: A validation gate pass records candidate quality, never automatic release approval.
+    """
+    ratio = _gate_ratio(gate)
+    name = gate["metric"]
     score, reference = float(metrics[name]), float(benchmark[name])
-    if not all(math.isfinite(value) and 0 <= value <= 1 for value in (score, reference)):
-        raise ValueError("Model and benchmark AP must be finite values between zero and one")
+    if not all(
+        math.isfinite(value) and 0 <= value <= 1 for value in (score, reference)
+    ):
+        raise ValueError(
+            "Model and benchmark AP must be finite values between zero and one"
+        )
     threshold = ratio * reference
     result = {
         "metric": name,
@@ -208,10 +275,19 @@ def check_quality_gate(metrics: dict, benchmark: dict, gate: dict) -> dict:
 def _input_columns(cfg: dict) -> list[str]:
     """Select configured predictors while explicitly blocking future outcomes and identifiers."""
     groups = cfg["features"]
-    names = list(dict.fromkeys([*groups["numeric"], *groups["categorical"], cfg["columns"]["symbol_col"]]))
-    forbidden = {cfg["columns"][key] for key in ("target_col", "future_volatility_col", "time_col")}
+    names = list(
+        dict.fromkeys(
+            [*groups["numeric"], *groups["categorical"], cfg["columns"]["symbol_col"]]
+        )
+    )
+    forbidden = {
+        cfg["columns"][key]
+        for key in ("target_col", "future_volatility_col", "time_col")
+    }
     if forbidden.intersection(names):
-        raise ValueError("Predictors must exclude targets, future volatility and timestamps")
+        raise ValueError(
+            "Predictors must exclude targets, future volatility and timestamps"
+        )
     return names
 
 
@@ -220,24 +296,45 @@ def _prepare_table(cfg: dict) -> pd.DataFrame:
     columns, rules = (cfg["columns"], cfg["rules"])
     scope = cfg.get("scope")
     if scope:
-        files = load_data.list_raw_files(cfg["paths"]["raw_dir"], cfg["data"]["file_pattern"])
-        months = pd.period_range(scope["start"], pd.Timestamp(scope["end_exclusive"]) - pd.Timedelta(days=1), freq="M")
+        files = load_data.list_raw_files(
+            cfg["paths"]["raw_dir"], cfg["data"]["file_pattern"]
+        )
+        months = pd.period_range(
+            scope["start"],
+            pd.Timestamp(scope["end_exclusive"]) - pd.Timedelta(days=1),
+            freq="M",
+        )
         expected = {f"{s}-1m-{m}.csv" for s in rules["allowed_symbols"] for m in months}
         if {p.name for p in files} != expected or len(files) != len(expected):
-            raise ValueError("Raw inventory differs from the approved asset/month scope")
-    raw = load_data.load_raw_data(cfg["paths"]["raw_dir"], cfg["data"], columns["symbol_col"])
-    candles = clean_data.clean_dataframe(raw, columns=columns, rules=rules, drop_invalid=True)
-    validate.validate_dataframe(candles, list(candles.columns), columns=columns, rules=rules)
+            raise ValueError(
+                "Raw inventory differs from the approved asset/month scope"
+            )
+    raw = load_data.load_raw_data(
+        cfg["paths"]["raw_dir"], cfg["data"], columns["symbol_col"]
+    )
+    candles = clean_data.clean_dataframe(
+        raw, columns=columns, rules=rules, drop_invalid=True
+    )
+    validate.validate_dataframe(
+        candles, list(candles.columns), columns=columns, rules=rules
+    )
     if scope:
         times = candles[columns["time_col"]]
         if not (
-            times.ge(pd.Timestamp(scope["start"], tz="UTC")) & times.lt(pd.Timestamp(scope["end_exclusive"], tz="UTC"))
+            times.ge(pd.Timestamp(scope["start"], tz="UTC"))
+            & times.lt(pd.Timestamp(scope["end_exclusive"], tz="UTC"))
         ).all():
             raise ValueError("Candle outside approved date scope")
     utils.save_csv(candles, cfg["paths"]["clean_data"])
-    candles = target_module.add_future_volatility(candles, columns, cfg["target"]["horizon"], rules["frequency"])
+    candles = target_module.add_future_volatility(
+        candles, columns, cfg["target"]["horizon"], rules["frequency"]
+    )
     return features.add_lookback_features(
-        candles, columns, cfg["features"]["windows"], rules["frequency"], feature_settings=cfg["features"]["parameters"]
+        candles,
+        columns,
+        cfg["features"]["windows"],
+        rules["frequency"],
+        feature_settings=cfg["features"]["parameters"],
     )
 
 
@@ -257,19 +354,37 @@ def _labelled_splits(table: pd.DataFrame, cfg: dict) -> tuple[dict, dict]:
         frequency=cfg["rules"]["frequency"],
     )
     splits = {"train": x_train, "validation": x_val, "test": x_test}
-    cutoffs = target_module.fit_volatility_cutoffs(splits["train"], columns, target["quantile"])
-    labelled = {name: target_module.assign_target(part, columns, cutoffs) for name, part in splits.items()}
+    cutoffs = target_module.fit_volatility_cutoffs(
+        splits["train"], columns, target["quantile"]
+    )
+    labelled = {
+        name: target_module.assign_target(part, columns, cutoffs)
+        for name, part in splits.items()
+    }
     for name, part in labelled.items():
         validate.validate_dataframe(
-            part, list(part.columns), target_column=columns["target_col"], columns=columns, rules=cfg["rules"]
+            part,
+            list(part.columns),
+            target_column=columns["target_col"],
+            columns=columns,
+            rules=cfg["rules"],
         )
-        logger.info("%s split: %d rows, positive rate %.3f", name, len(part), part[columns["target_col"]].mean())
+        logger.info(
+            "%s split: %d rows, positive rate %.3f",
+            name,
+            len(part),
+            part[columns["target_col"]].mean(),
+        )
     return (labelled, cutoffs)
 
 
 def _train_and_evaluate(splits: dict, cfg: dict) -> tuple:
     """Fit on train, score validation against the benchmark, apply the gate, audit on test once."""
-    inputs, target, group = (_input_columns(cfg), cfg["columns"]["target_col"], cfg["columns"]["symbol_col"])
+    inputs, target, group = (
+        _input_columns(cfg),
+        cfg["columns"]["target_col"],
+        cfg["columns"]["symbol_col"],
+    )
     gate_settings = cfg["quality_gate"]
     recipe = features.get_feature_preprocessor(
         cfg["features"]["numeric"],
@@ -281,7 +396,10 @@ def _train_and_evaluate(splits: dict, cfg: dict) -> tuple:
         splits["train"][target],
         recipe,
         cfg["problem"]["problem_type"],
-        model_params={"model_type": cfg["training"]["model_type"], **cfg["training"]["params"]},
+        model_params={
+            "model_type": cfg["training"]["model_type"],
+            **cfg["training"]["params"],
+        },
         random_state=cfg["training"]["random_state"],
     )
     results = {}
@@ -290,7 +408,9 @@ def _train_and_evaluate(splits: dict, cfg: dict) -> tuple:
     for name in ("validation", "test"):
         if name == "test":
             results["quality_gate"] = check_quality_gate(
-                results[gate_settings["split"]], results[f"benchmark_{gate_settings['split']}"], gate_settings
+                results[gate_settings["split"]],
+                results[f"benchmark_{gate_settings['split']}"],
+                gate_settings,
             )
             utils.write_json(
                 {
@@ -316,7 +436,9 @@ def _train_and_evaluate(splits: dict, cfg: dict) -> tuple:
             part[target], part[gate_settings["benchmark_column"]], part[group]
         )
     results["quality_gate"] = check_quality_gate(
-        results[gate_settings["split"]], results[f"benchmark_{gate_settings['split']}"], gate_settings
+        results[gate_settings["split"]],
+        results[f"benchmark_{gate_settings['split']}"],
+        gate_settings,
     )
     return (model, results)
 
@@ -328,7 +450,11 @@ def _write_outputs(model, test: pd.DataFrame, results: dict, cfg: dict) -> None:
     if not results["quality_gate"]["passed"]:
         model_path = paths["model"].parent / "failed_candidates" / paths["model"].name
     metadata = {
-        "approval_status": "candidate_pending_review" if results["quality_gate"]["passed"] else "failed_quality_gate",
+        "approval_status": (
+            "candidate_pending_review"
+            if results["quality_gate"]["passed"]
+            else "failed_quality_gate"
+        ),
         "validation_gate_pass": results["quality_gate"]["passed"],
         "model_version": "research-candidate",
         "predictor_order": _input_columns(cfg),
@@ -346,14 +472,16 @@ def _write_outputs(model, test: pd.DataFrame, results: dict, cfg: dict) -> None:
         "source": results["evidence"]["source_hashes"],
         "data": results["evidence"]["data_manifest"],
     }
-    metadata["model_version"] = hashlib.sha256(json.dumps(identity, sort_keys=True, default=str).encode()).hexdigest()[
-        :16
-    ]
+    metadata["model_version"] = hashlib.sha256(
+        json.dumps(identity, sort_keys=True, default=str).encode()
+    ).hexdigest()[:16]
     utils.save_model({"model": model, "metadata": metadata}, model_path)
     results["artifact_sha256"] = utils.file_sha256(model_path)
     results["artifact"] = str(model_path)
     results["approval_status"] = metadata["approval_status"]
-    predictions = infer.run_inference(model, test[_input_columns(cfg)], include_proba=True)
+    predictions = infer.run_inference(
+        model, test[_input_columns(cfg)], include_proba=True
+    )
     identifiers = test[[columns["symbol_col"], columns["time_col"]]]
     utils.save_csv(pd.concat([identifiers, predictions], axis=1), paths["predictions"])
     utils.write_json(results, paths["metrics"])
@@ -361,13 +489,19 @@ def _write_outputs(model, test: pd.DataFrame, results: dict, cfg: dict) -> None:
 
 def _run_evidence(cfg: dict) -> dict:
     """Record what reproduces the run: input checksums, model settings, split and gate."""
-    raw_files = load_data.list_raw_files(cfg["paths"]["raw_dir"], cfg["data"]["file_pattern"])
+    raw_files = load_data.list_raw_files(
+        cfg["paths"]["raw_dir"], cfg["data"]["file_pattern"]
+    )
     return {
         "python": platform.python_version(),
         "package_versions": {
-            name: importlib.metadata.version(name) for name in ["pandas", "numpy", "scikit-learn", "joblib"]
+            name: importlib.metadata.version(name)
+            for name in ["pandas", "numpy", "scikit-learn", "joblib"]
         },
-        "source_hashes": {p.name: utils.file_sha256(p) for p in Path(__file__).resolve().parent.glob("*.py")},
+        "source_hashes": {
+            p.name: utils.file_sha256(p)
+            for p in Path(__file__).resolve().parent.glob("*.py")
+        },
         "settings": cfg,
         "data_manifest": {path.name: utils.file_sha256(path) for path in raw_files},
         "training": cfg["training"],
@@ -390,7 +524,9 @@ def run_pipeline(cfg: dict) -> dict:
     return results
 
 
-def resolved_settings(raw_dir: Path | None = None, output_root: Path | None = None) -> dict:
+def resolved_settings(
+    raw_dir: Path | None = None, output_root: Path | None = None
+) -> dict:
     """Inputs: raw_dir, output_root.
     Outputs: Copied SETTINGS with paths resolved against the project or requested output root.
     Why: Keep one tested pipeline responsibility."""
@@ -406,12 +542,22 @@ def main() -> None:
     """Inputs: SETTINGS.
     Outputs: None; executes the fixed pipeline and logs its validation gate outcome.
     Why: Keep one tested pipeline responsibility."""
-    logging.basicConfig(level=SETTINGS["logging"]["level"], format="%(levelname)s %(name)s: %(message)s")
+    logging.basicConfig(
+        level=SETTINGS["logging"]["level"], format="%(levelname)s %(name)s: %(message)s"
+    )
     report = run_pipeline(
-        resolved_settings(raw_dir=Path(os.environ["ML_RAW_DIR"]) if os.environ.get("ML_RAW_DIR") else None)
+        resolved_settings(
+            raw_dir=(
+                Path(os.environ["ML_RAW_DIR"]) if os.environ.get("ML_RAW_DIR") else None
+            )
+        )
     )
     logger.info("Candidate artifact: %s", report["artifact"])
-    logger.info("Metrics: %s; predictions: %s", SETTINGS["paths"]["metrics"], SETTINGS["paths"]["predictions"])
+    logger.info(
+        "Metrics: %s; predictions: %s",
+        SETTINGS["paths"]["metrics"],
+        SETTINGS["paths"]["predictions"],
+    )
     logger.info(
         "Pipeline finished; validation quality gate %s; candidate still requires review",
         report["quality_gate"]["passed"],
@@ -432,9 +578,12 @@ def split_data(
 ) -> tuple:
     """Inputs: aligned X/y, compatibility split arguments and explicit UTC calendar boundaries.
     Outputs: X_train, X_val, X_test, y_train, y_val, y_test; paired rows retain alignment.
-    Why: Forecasting uses dates rather than random shares; random_state never shuffles rows."""
+    Why: Forecasting uses dates rather than random shares; random_state never shuffles rows.
+    """
     if stratify or split_settings is None or time_column is None:
-        raise ValueError("Forecasting requires explicit chronological boundaries, never stratification")
+        raise ValueError(
+            "Forecasting requires explicit chronological boundaries, never stratification"
+        )
     if not X.index.equals(y.index) or not X.index.is_unique:
         raise ValueError("Split indices must align and identify unique rows")
     table = X.copy()
@@ -444,7 +593,9 @@ def split_data(
     table[key] = y
     parts = split_by_time(table, time_column, split_settings, horizon, frequency)
     order = ["train", "validation", "test"]
-    return tuple(parts[name].drop(columns=key) for name in order) + tuple(parts[name][key] for name in order)
+    return tuple(parts[name].drop(columns=key) for name in order) + tuple(
+        parts[name][key] for name in order
+    )
 
 
 if __name__ == "__main__":

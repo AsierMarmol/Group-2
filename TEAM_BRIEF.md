@@ -16,7 +16,7 @@ README follow-ups: reviewed ML/data evidence -> Asier; business benefit, calibra
 features.py signature: get_feature_preprocessor(numeric_columns,categorical_columns,scale=True); configured windows in main.SETTINGS.
 Agreed extra parameters: optional candle roles/rules and loader file-schema settings; optional evaluate group_column/expected_groups; chronological split_settings/time_column/horizon/frequency.
 utils.py helpers: load_csv, save_csv, save_model, load_model; private compatibility helpers support implementation tests.
-Environment: Python3.12; environment.yml and requirements-verified.txt define the tested packages; use the same interpreter for notebooks/tests/pipeline.
+Environment: Python3.12; environment.yml/requirements-verified.txt pin pipeline, notebook and grading tools; use the same interpreter throughout.
 Decisions: 60 candles contain 59 returns; y strictly exceeds per-asset eligible-training linear RV90; labels never enter X; risk scores uncalibrated.
 Decisions: inference never silently drops rows; raw training-candle cleanup explicitly opts into dropping invalid rows before labels exist.
 Decisions: runtime settings live only in main.SETTINGS; YAML/CI/logging extensions deferred; candidate gate pass is not release approval.
@@ -33,4 +33,4 @@ Decisions: README PR -> team setup -> utils -> load/clean -> validate -> target/
 Decisions: config/logger/active CI uploads are deferred to Session10+; release uses reviewed dev->main PR; no direct dev/main commits.
 Decisions: reuse confirmed member branches with separate PR milestones; exception to the teacher's branch-per-module cleanup workflow.
 
-Decisions: main/notebooks merged via PRs #10/#11; final local verification passed; final correction review and dev->main release remain pending.
+Decisions: main/notebooks/corrections merged via PRs #10/#11/#12; grading improvements require Selin review; dev->main release remains pending.
