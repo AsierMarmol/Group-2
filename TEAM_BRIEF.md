@@ -11,7 +11,7 @@ Model: histogram gradient boosting, 100 iterations, 31 leaves, learning_rate .1,
 Metric: average_precision; exactly BTC/ETH/SOL equal mean; validation >=1.20 x same-row past-60-candle RV benchmark.
 Split: train Apr2025–Mar2026; validation Apr–Jun2026; final Jul–Sep2026; UTC decision-time boundaries, label-end purging; no shuffle/stratification.
 Validation rules: finite positive OHLC, UTC minute grid, finite nonnegative volume, integer nonnegative trades, valid candle duration; exact duplicates removable, conflicts rejected.
-README follow-ups: reviewed ML/data evidence -> Asier; business benefit, calibration, live limits and independent confirmation remain TBD.
+README follow-ups: Asier coordinates business pilot/owner/cost decisions; calibration, live limits and independent future confirmation remain open; see README section 1.
 ## Interfaces and settings
 features.py signature: get_feature_preprocessor(numeric_columns,categorical_columns,scale=True); configured windows in main.SETTINGS.
 Agreed extra parameters: optional candle roles/rules and loader file-schema settings; optional evaluate group_column/expected_groups; chronological split_settings/time_column/horizon/frequency.
@@ -19,7 +19,7 @@ utils.py helpers: load_csv, save_csv, save_model, load_model; private compatibil
 Environment: Python3.12; environment.yml/requirements-verified.txt pin pipeline, notebook and grading tools; use the same interpreter throughout.
 Decisions: 60 candles contain 59 returns; y strictly exceeds per-asset eligible-training linear RV90; labels never enter X; risk scores uncalibrated.
 Decisions: inference never silently drops rows; raw training-candle cleanup explicitly opts into dropping invalid rows before labels exist.
-Decisions: runtime settings live only in main.SETTINGS; YAML/CI/logging extensions deferred; candidate gate pass is not release approval.
+Decisions: environment.yml is required now; runtime SETTINGS stay in main.py for Sessions4–9; config.yaml migration starts Session10; CI/logging extensions deferred.
 Decisions: final period has prior analytical exposure; time-block rather than independent-row uncertainty is needed if added later.
 ## Ownership and review
 Owners (team): utils.py -> Gabriel; reviewer Asier; branch gabrielstec/feature.
@@ -33,4 +33,6 @@ Decisions: README PR -> team setup -> utils -> load/clean -> validate -> target/
 Decisions: config/logger/active CI uploads are deferred to Session10+; release uses reviewed dev->main PR; no direct dev/main commits.
 Decisions: reuse confirmed member branches with separate PR milestones; exception to the teacher's branch-per-module cleanup workflow.
 
-Decisions: main/notebooks/corrections merged via PRs #10/#11/#12; grading improvements require Selin review; dev->main release remains pending.
+Decisions: PRs #10–#13 merged into dev; Selin approved #13; dev d1ae374 reverified; reviewed dev->main release remains pending.
+Decisions: 150 tests pass; branch coverage99.29%, Pylint9.75, complexityA/max10; actual scores/rows in README; gate pass never approves live use.
+Decisions: update the environment when environment.yml or requirements-verified.txt changes; preserve the same interpreter for all checks.
