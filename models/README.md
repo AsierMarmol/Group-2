@@ -1,7 +1,14 @@
 # Model artifacts
 
-The integrated pipeline writes candidate bundles under candidates/ or failed_candidates/.
-Bundles contain fitted preprocessing/model, feature definitions, training-only target cutoffs, settings and metadata.
-A quality-gate pass does not approve release. Do not automatically overwrite an accepted model.joblib.
-Verify loading and predictions without retraining during model integration. Load only trusted serialized files.
-Generated models are ignored by Git; this README may be tracked.
+The pipeline writes candidate bundles to candidates/model.joblib when the validation gate passes,
+or failed_candidates/model.joblib when it fails. Neither route overwrites an accepted model.joblib.
+Rerunning the same route replaces that route's experimental candidate; this is not a release registry.
+
+Bundles contain fitted preprocessing/model, predictor order, feature definitions, training-only per-asset cutoffs,
+settings, uncalibrated status and provenance. The version identifies the recipe/data/source fingerprint;
+reports/metrics.json records the serialized artifact's SHA-256 separately.
+Passing the gate leaves approval_status as candidate_pending_review; failure gives failed_quality_gate.
+Only trusted serialized artifacts should be loaded. Generated models are ignored by Git.
+
+Local verification on 10 November 2026 reloaded the real-data candidate in a fresh process with fitting disabled
+and matched stored predictions using historical and REST timestamp units. Release approval remains pending.

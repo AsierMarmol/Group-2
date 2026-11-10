@@ -20,7 +20,7 @@
 | ML | `average_precision` (equal-weight mean across BTC, ETH, SOL) | **0.408660**, measured on April–June 2026; past-60-candle realized-volatility benchmark | **≥ 1.20 × benchmark** on chronological validation data |
 | Operational | API latency, data freshness, cost per prediction | **TBD** | Limits **TBD** |
 
-The **20% ML gate** was pre-agreed. The previously verified local ML run achieved validation macro AP **0.514824**, above the required **0.490392** (1.20 × benchmark). This is a validation-only pass; the model remains a candidate pending review. Per-asset and historical final-period results must be included in the model evaluation handoff. The final period has prior analytical exposure. Failed candidates are not promoted.
+The **20% ML gate** was pre-agreed. The integrated local pipeline run on 10 November 2026 reproduced validation macro AP **0.514824**, above the required **0.490392** (1.20 × benchmark). This is a validation-only pass; the model remains a candidate pending review. Per-asset and historical final-period results must be included in the model evaluation handoff. The final period has prior analytical exposure. Failed candidates are not promoted.
 
 ### Solution
 
@@ -28,7 +28,7 @@ For BTCUSDT, ETHUSDT and SOLUSDT, a classifier uses **60 completed one-minute ca
 
 Analysts combine scores with portfolio exposure and leverage to consider hedging, reduced positions or paused trades. **No automated trades or directional forecasts.** Withhold stale/invalid scores; fall back to conventional monitoring and manual assessment.
 
-**MLOps stages:** GitHub scaffold → tested one-command pipeline → CI/CD, Docker and live prediction API. The local ML pipeline was previously verified; its integration into this repository and the later deployment stage remain unverified or unimplemented.
+**MLOps stages:** GitHub scaffold → tested one-command pipeline → CI/CD, Docker and live prediction API. The local one-command pipeline is implemented and verified. Notebook integration, team approval and the later deployment stage remain pending.
 
 ### Data
 
@@ -49,15 +49,15 @@ Analysts combine scores with portfolio exposure and leverage to consider hedging
 
 ### Open gaps
 
-- **Measure:** business baseline/improvement, calibration, latency, freshness and costs. Repository-level reproduction of the local dataset and benchmark/model measurements remains pending; independent future confirmation remains open.
-- **Define:** business target/rubric, optional alert policy, service limits and rollback. Feature/label timing and splits were verified locally; repository integration remains pending.
+- **Measure:** business baseline/improvement, calibration, latency, freshness and costs. The integrated local pipeline reproduced the dataset and benchmark/model measurements; independent future confirmation remains open.
+- **Define:** business target/rubric, optional alert policy, service limits and rollback. Feature/label timing, chronological splitting and model reload were verified in the integrated local pipeline.
 - **Confirm:** team acceptance of the tested notebook and modules, client owners, student hours, target hardware and deployment. Team/module contracts are in `TEAM_BRIEF.md`.
 
 ## 2. Stage-2 setup and execution
 
-**Integration status:** The commands and file references below describe the agreed target structure. Supporting modules and notebooks
-will arrive through their assigned reviewed PRs; this README-only PR does not make
-the current repository executable. Historical measurements are not a new run of this checkout.
+**Integration status:** The merged modules and local main-pipeline implementation run end to end.
+The main-pipeline changes await Selin's review and merge; notebooks remain a separate milestone.
+No model is automatically approved by a successful run or quality-gate pass.
 
 Runtime settings belong in `SETTINGS` at the top of `src/main.py`. `config.yaml` remains
 the original repository placeholder for the later course stage. No active CI, API, polling or deployment is included.
@@ -106,6 +106,24 @@ Load joblib files only from trusted sources.
 Run both notebooks with their kernel working directory at the repository root. The standalone notebook is the frozen
 research reference; the second notebook runs the modular command and checks reload/parity. New experiments belong in
 a separate notebook. Record the actual environment and execution results during integration.
+
+### Local integration verification — 10 November 2026
+
+Verified on Windows with Python 3.12.16 in the team Conda environment:
+
+- 105 tests passed, zero failures/errors/skips; full source/test Flake8 passed.
+- Diagnostic statement/branch coverage: 78% overall, 89% for `src/main.py`. No course minimum is assumed.
+- All 54 CSVs loaded: 2,367,360 candles; no large dataset copy was made.
+- Eligible rows: training 1,576,578; validation 393,078; historical final period 397,398.
+- Validation macro AP: model 0.514824, benchmark 0.408660, required threshold 0.490392; gate passed.
+- Historical final-period macro AP: model 0.414614, benchmark 0.300345. This period has prior analytical exposure.
+- Fresh-process reload reproduced a stored prediction with training disabled; historical microsecond and REST
+  millisecond opening times produced identical scores. The saved artifact checksum matched the metrics report.
+
+The model remains `candidate_pending_review`. The risk scores are uncalibrated, the business benefit is unmeasured,
+and neither live readiness nor independent future performance is established. Notebook execution is pending.
+Follow-up tests should strengthen raw-input rejection coverage and directly exercise the public utils/preprocessor
+interfaces. Full run details are generated in `reports/metrics.json`; data and model outputs stay outside Git.
 
 ## 3. Team integration
 
