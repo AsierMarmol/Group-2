@@ -65,8 +65,8 @@ def _clean_candles(df_raw: pd.DataFrame, columns: dict, rules: dict, target_colu
 
     Args:
         df_raw: Raw candles from load_data.py.
-        columns: The ``columns`` section of config.yaml (role -> column name).
-        rules: The ``rules`` section of config.yaml (value, positive and non-negative columns).
+        columns: The ``columns`` section of SETTINGS (role -> column name).
+        rules: The ``rules`` section of SETTINGS (value, positive and non-negative columns).
         target_column: Target to keep, if the data already has one; rows without it are dropped.
 
     Returns:

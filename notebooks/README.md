@@ -39,7 +39,20 @@ parameters, predictor order, label rule and split boundaries. Fresh-process relo
 9 windows with identical microsecond and millisecond results; 7 malformed requests were rejected.
 
 The Windows run recorded in the main README gave validation macro AP 0.514824 and final 0.414614 with the same
-data, cutoffs and validation benchmark; the difference is model-score numerics across platforms. Both pass the gate.
+data, cutoffs and validation benchmark. The exact cause of the observed cross-platform/build score difference was not isolated. Both pass the gate.
 The candidate remains `candidate_pending_review`; scores are uncalibrated and the final period is not a holdout.
 
 `docs/figures/final_diagnostics_v2.png`: final-period precision–recall and reliability curves from the standalone run.
+
+## Final Windows verification — 10 November 2026
+
+Both notebooks were rerun from clean Python 3.12.16 kernels with the repository root as working directory and the
+full 54-file dataset supplied by ML_RAW_DIR. Notebook source cells and the frozen reference were preserved.
+Standalone/modular per-asset and macro results, cutoffs, rows, input hashes and declared settings agreed within 1e-12.
+Validation macro AP was 0.514824 (benchmark 0.408660; required 0.490392); final-period macro AP was 0.414614
+(benchmark 0.300345, prior-exposure limitation applies). Nine raw reload windows matched batch predictions with
+microsecond/millisecond parity; all seven malformed demonstration requests were rejected.
+The final corrections add automated public-interface/input-rejection checks and reject missing asset values within
+a raw window. The notebook demos are a small sample, not the entire automated regression suite.
+Committed outputs and the diagnostic figure record Selin's macOS run; they are not relabelled as Windows outputs.
+Source-code release review remains separate from model approval, calibration and later deployment work.

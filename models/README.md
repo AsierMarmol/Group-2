@@ -12,3 +12,8 @@ Only trusted serialized artifacts should be loaded. Generated models are ignored
 
 Local verification on 10 November 2026 reloaded the real-data candidate in a fresh process with fitting disabled
 and matched stored predictions using historical and REST timestamp units. Release approval remains pending.
+
+To inspect a trusted artifact, call `bundle = utils.load_model(path)` after `from src import utils`.
+The fitted sklearn pipeline is `bundle["model"]`; metadata is `bundle["metadata"]`.
+For raw candles use `infer.score_candles` with the schema in `data/inference/README.md`;
+do not pass raw OHLCV columns directly to the feature-based pipeline.

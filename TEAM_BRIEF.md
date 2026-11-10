@@ -33,4 +33,4 @@ Decisions: README PR -> team setup -> utils -> load/clean -> validate -> target/
 Decisions: config/logger/active CI uploads are deferred to Session10+; release uses reviewed dev->main PR; no direct dev/main commits.
 Decisions: reuse confirmed member branches with separate PR milestones; exception to the teacher's branch-per-module cleanup workflow.
 
-Decisions: main pipeline locally verified on 10 November 2026; Selin review/merge, notebooks and final release remain pending.
+Decisions: main/notebooks merged via PRs #10/#11; final local verification passed; final correction review and dev->main release remain pending.

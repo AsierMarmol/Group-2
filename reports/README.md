@@ -10,3 +10,7 @@ predictions.csv begins with symbol and UTC open_time, followed by prediction and
 probability is an uncalibrated risk score; the estimator-default prediction is not an approved warning policy.
 The final period has prior analytical exposure and must not guide tuning or be called an untouched holdout.
 Generated reports are ignored by Git. Keep actual run measurements and limitations in the main README.
+
+`open_time` identifies the final input candle, not the prediction decision time.
+Decision time is that opening plus one minute; the 15-minute outcome matures 15 minutes after the decision.
+Use symbol plus open_time to match a diagnostic prediction to its exact input window.

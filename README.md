@@ -24,11 +24,11 @@ The **20% ML gate** was pre-agreed. The integrated local pipeline run on 10 Nove
 
 ### Solution
 
-For BTCUSDT, ETHUSDT and SOLUSDT, a classifier uses **60 completed one-minute candles** to score unusually high volatility in the **next 15 minutes**. Calibration is **TBD**, so outputs remain risk scores. A **proposed** Binance REST poller triggers minute-by-minute predictions; FastAPI `POST /predict` also supports requests on demand. Historical replay supports testing.
+For BTCUSDT, ETHUSDT and SOLUSDT, a classifier uses **60 completed one-minute candles** to score unusually high volatility in the **next 15 minutes**. Calibration is **TBD**, so outputs remain risk scores. This deliverable runs a local batch pipeline and historical replay. A Binance REST poller and FastAPI `POST /predict` are proposed for later stages; neither is implemented here.
 
 Analysts combine scores with portfolio exposure and leverage to consider hedging, reduced positions or paused trades. **No automated trades or directional forecasts.** Withhold stale/invalid scores; fall back to conventional monitoring and manual assessment.
 
-**MLOps stages:** GitHub scaffold → tested one-command pipeline → CI/CD, Docker and live prediction API. The local one-command pipeline is implemented and verified. Notebook integration, team approval and the later deployment stage remain pending.
+**MLOps stages:** GitHub scaffold → tested one-command pipeline → CI/CD, Docker and live prediction API. The local one-command pipeline is implemented and verified. Both notebooks are integrated and locally verified. Final correction review, release approval and later deployment stages remain pending.
 
 ### Data
 
@@ -51,13 +51,14 @@ Analysts combine scores with portfolio exposure and leverage to consider hedging
 
 - **Measure:** business baseline/improvement, calibration, latency, freshness and costs. The integrated local pipeline reproduced the dataset and benchmark/model measurements; independent future confirmation remains open.
 - **Define:** business target/rubric, optional alert policy, service limits and rollback. Feature/label timing, chronological splitting and model reload were verified in the integrated local pipeline.
-- **Confirm:** team acceptance of the tested notebook and modules, client owners, student hours, target hardware and deployment. Team/module contracts are in `TEAM_BRIEF.md`.
+- **Confirm:** final correction/release approval, client owners, student hours, target hardware and deployment. Team/module contracts are in `TEAM_BRIEF.md`.
 
-## 2. Stage-2 setup and execution
+## 2. Setup and local execution
 
-**Integration status:** The merged modules and local main-pipeline implementation run end to end.
-The main-pipeline changes await Selin's review and merge; notebooks remain a separate milestone.
-No model is automatically approved by a successful run or quality-gate pass.
+**Integration status:** The main pipeline and both notebook milestones are merged into `dev` through PRs #10 and #11.
+The final local review identified and fixed a missing-symbol input-validation issue and added cross-module regression
+checks. These final corrections still require review and merge into `dev` before the final `dev` → `main` release.
+The source-code release covers the first deliverable; it does not approve a model for live use or implement later stages.
 
 Runtime settings belong in `SETTINGS` at the top of `src/main.py`. `config.yaml` remains
 the original repository placeholder for the later course stage. No active CI, API, polling or deployment is included.
@@ -83,7 +84,7 @@ default_channels: []
 
 Update only the channel entries in the relevant configuration, preserving unrelated settings, then retry creation.
 The project environment also declares `nodefaults`. No acceptance of unused default-channel terms is required.
-Windows environment creation was verified with Python 3.12.16; other operating systems remain untested.
+Windows environment creation was verified with Python 3.12.16. Selin recorded a macOS notebook run; other platform installation checks were not repeated in this final review.
 
 Select the same environment with **>Python: Select Interpreter**. If the environment already exists, update it only
 after environment.yml changes: `conda env update -f environment.yml --prune`.
@@ -103,7 +104,11 @@ The teacher-compatible `probability` output is an uncalibrated risk score; binar
 Raw-candle historical replay is available through `src.infer.score_candles` with an explicit timezone-aware `as_of`.
 Load joblib files only from trusted sources.
 
-Run both notebooks with their kernel working directory at the repository root. The standalone notebook is the frozen
+Run `notebooks/crypto_volatility_ml.ipynb` first and then `notebooks/volatility_model.ipynb` from clean kernels,
+with their working directory at the repository root and `ML_RAW_DIR` set before launching Jupyter when needed.
+Use the team Python 3.12 environment for both. The standalone reference retains an old Python 3.14/requirements.txt
+setup note; the instructions here and in `notebooks/README.md` supersede that historical note.
+The standalone notebook is the frozen
 research reference; the second notebook runs the modular command and checks reload/parity. New experiments belong in
 a separate notebook. Record the actual environment and execution results during integration.
 
@@ -111,8 +116,8 @@ a separate notebook. Record the actual environment and execution results during 
 
 Verified on Windows with Python 3.12.16 in the team Conda environment:
 
-- 105 tests passed, zero failures/errors/skips; full source/test Flake8 passed.
-- Diagnostic statement/branch coverage: 78% overall, 89% for `src/main.py`. No course minimum is assumed.
+- 109 tests passed, zero failures/errors/skips; full source/test Flake8 and dependency checks passed.
+- Diagnostic statement/branch coverage: 90% overall, 91% for `src/main.py`. No course minimum is assumed.
 - All 54 CSVs loaded: 2,367,360 candles; no large dataset copy was made.
 - Eligible rows: training 1,576,578; validation 393,078; historical final period 397,398.
 - Validation macro AP: model 0.514824, benchmark 0.408660, required threshold 0.490392; gate passed.
@@ -121,9 +126,18 @@ Verified on Windows with Python 3.12.16 in the team Conda environment:
   millisecond opening times produced identical scores. The saved artifact checksum matched the metrics report.
 
 The model remains `candidate_pending_review`. The risk scores are uncalibrated, the business benefit is unmeasured,
-and neither live readiness nor independent future performance is established. Notebook execution is pending.
-Follow-up tests should strengthen raw-input rejection coverage and directly exercise the public utils/preprocessor
-interfaces. Full run details are generated in `reports/metrics.json`; data and model outputs stay outside Git.
+and neither live readiness nor independent future performance is established. Both notebooks passed from clean
+kernels on the full dataset. Standalone/modular metrics, cutoffs and row counts agreed within `1e-12` on Windows;
+nine fresh-process raw windows matched stored predictions and all seven malformed notebook demonstrations were rejected.
+The final automated checks also cover public CSV/model/preprocessor interfaces, frozen preprocessing at inference,
+invalid raw windows/values/symbols/timestamps, candidate approval guards and target/future-column exclusion.
+Full run details are generated in `reports/metrics.json`; data and model outputs stay outside Git.
+
+Selin's recorded macOS scores differ slightly from the verified Windows scores while both pass the gate.
+The exact cause was not isolated; do not require cross-platform bit-for-bit model scores. See `notebooks/README.md`.
+The course LICENSE placeholder is unchanged; no open-source license or new reuse permissions are claimed.
+Business benefit, calibration, client ownership, service limits and licensing decisions remain explicit open items.
+They do not represent implemented later-stage functionality.
 
 ## 3. Team integration
 
