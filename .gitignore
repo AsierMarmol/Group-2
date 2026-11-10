@@ -46,6 +46,8 @@ reports/**
 logs/**
 !logs/
 !logs/README.md
+# Standalone research notebook outputs (recreated by notebooks/crypto_volatility_ml.ipynb)
+results/
 
 # Raw Binance downloads and their checksums
 *.zip
